@@ -1,9 +1,8 @@
-# image for building
 FROM alpine:latest AS builder
 
-RUN apk --update-cache add \
-    automake build-base cmake curl git libtool linux-headers perl pkgconf python3 python3-dev re2c tar \
-    icu-dev libexecinfo-dev openssl-dev zlib-dev qt6-qtbase-dev qt6-qttools-dev
+RUN apk --no-cache add \
+      automake build-base cmake curl git libtool linux-headers perl pkgconf python3 python3-dev re2c tar \
+      icu-dev libexecinfo-dev openssl-dev zlib-dev qt6-qtbase-dev qt6-qttools-dev qt5-qtbase-dev qt5-qttools-dev
 
 RUN cd $HOME && \
     git clone --shallow-submodules --recurse-submodules https://github.com/ninja-build/ninja.git $HOME/ninja && \
@@ -66,6 +65,7 @@ RUN cd $HOME && \
       -D BOOST_INCLUDEDIR="$HOME/boost_$BOOST_VERSION/" \
       -D CMAKE_CXX_STANDARD_LIBRARIES="/usr/lib/libexecinfo.so" \
       -D CMAKE_INSTALL_PREFIX="/usr/local" \
+      -D QBT_VER_STATUS= \
       -DGUI=OFF \
       -DQT6=ON \
       -DSTACKTRACE=OFF && \
@@ -78,6 +78,7 @@ FROM alpine:latest
 RUN apk --no-cache add \
       doas \
       python3 \
+      qt5-qtbase \
       qt6-qtbase \
       tini
 
