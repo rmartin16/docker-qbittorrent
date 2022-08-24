@@ -47,15 +47,18 @@ RUN cd $HOME && \
 
 ARG QBT_VERSION
 RUN cd $HOME && \
-    if [ "$QBT_VERSION" = "master" ]; then \
-      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/master.tar.gz" && \
-      curl -sNLK $QBT_URL | tar -zxf - -C "$HOME" && \
-      cd qBittorrent-master ; \
+    if [[ "$QBT_VERSION" = "master" ]] ; then \
+      QBT_DIR="qBittorrent-${QBT_VERSION}" && \
+      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ; \
+    elif [[ "$QBT_VERSION" = "v4_4_x" || "${QBT_VERSION}" = "v4_3_x" ]] ; then \
+      QBT_DIR="qBittorrent-${QBT_VERSION:1}" && \
+      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ; \
     else \
-      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz" && \
-      curl -sNLk $QBT_URL | tar -zxf - -C "$HOME" && \
-      cd "$HOME/qBittorrent-release-${QBT_VERSION}" ; \
+      QBT_DIR="qBittorrent-release-${QBT_VERSION}" && \
+      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz" ; \
     fi && \
+    curl -sNLk ${QBT_URL} | tar -zxf - -C "$HOME" && \
+    cd "$HOME/${QBT_DIR}" && \
     cmake \
       -B build \
       -G Ninja \
