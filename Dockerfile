@@ -1,9 +1,28 @@
 FROM alpine:latest AS builder
 
+RUN apk --update-cache add \
+      automake \
+      build-base \
+      cmake \
+      curl \
+      git \
+      libtool \
+      linux-headers \
+      perl \
+      pkgconf \
+      python3 \
+      python3-dev \
+      re2c \
+      tar \
+      icu-dev \
+      libexecinfo-dev \
+      openssl-dev \
+      zlib-dev
+
 ARG QT_VERSION="qt6"
 RUN apk --update-cache add \
-      automake build-base cmake curl git libtool linux-headers perl pkgconf python3 python3-dev re2c tar \
-      icu-dev libexecinfo-dev openssl-dev zlib-dev ${QT_VERSION}-qtbase-dev ${QT_VERSION}-qttools-dev
+      ${QT_VERSION}-qtbase-dev \
+      ${QT_VERSION}-qttools-dev
 
 RUN cd $HOME && \
     git clone --shallow-submodules --recurse-submodules https://github.com/ninja-build/ninja.git $HOME/ninja && \
@@ -77,22 +96,15 @@ RUN cd $HOME && echo ${CACHEBUST} && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
-# image for running
+
 FROM alpine:latest
 
-ARG QT_VERSION="qt6"
-RUN apk --no-cache add \
-      doas \
-      python3 \
-      ${QT_VERSION}-qtbase \
-      tini
+RUN apk --no-cache add doas python3 tini
 
-RUN adduser \
-      -D \
-      -H \
-      -s /sbin/nologin \
-      -u 1000 \
-      qbtUser && \
+ARG QT_VERSION="qt6"
+RUN apk --no-cache add ${QT_VERSION}-qtbase
+
+RUN adduser -D -H -s /sbin/nologin -u 1000 qbtUser && \
     echo "permit nopass :root" >> "/etc/doas.d/doas.conf"
 
 COPY --from=builder /usr/local/lib/libtorrent-rasterbar* /usr/local/lib/

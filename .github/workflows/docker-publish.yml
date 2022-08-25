@@ -27,7 +27,7 @@ jobs:
           "4.4.0", "4.4.1", "4.4.2", "4.4.3", "4.4.3.1", "4.4.4"
         ]
         LIBTORRENT_VER: [ "2.0.7" ]
-        BOOST_VERSION: [ "1_76_0" ]
+        BOOST_VERSION: [ "1_80_0" ]
 
     steps:
 
