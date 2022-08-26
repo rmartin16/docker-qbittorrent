@@ -1,6 +1,8 @@
 name: Publish Historical Images
 
 on:
+  schedule:
+    - cron: "36 6 */7 * *"
   push:
     branches: [ "main" ]
   pull_request:
@@ -30,8 +32,17 @@ jobs:
           "4.4.0", "4.4.1", "4.4.2", "4.4.3", "4.4.3.1", "4.4.4"
         ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
-        LIBTORRENT_VER: [ "2.0.7" ]
-        BOOST_VERSION: [ "1_80_0" ]
+        include:
+          - LIBTORRENT_VER: "2.0.7"
+          - BOOST_VERSION: "1_80_0"
+        exclude:
+          # incompatible with later versions of libtorrent (qbittorrent/qBittorrent/13981#issuecomment-746836281)
+          - QBITTORRENT_VER: "4.3.0"
+            QBITTORRENT_BUILD_TYPE: "debug"
+          - QBITTORRENT_VER: "4.3.0.1"
+            QBITTORRENT_BUILD_TYPE: "debug"
+          - QBITTORRENT_VER: "4.3.1"
+            QBITTORRENT_BUILD_TYPE: "debug"
 
     steps:
 
@@ -81,6 +92,7 @@ jobs:
             type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
             type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
             type=raw,value=latest,enable=${{ matrix.QBITTORRENT_VER == env.LATEST_QBT_VER && matrix.LIBTORRENT_VER == env.LATEST_LIBTORRENT_VER && matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
+            type=raw,value=debug,enable=${{ matrix.QBITTORRENT_VER == env.LATEST_QBT_VER && matrix.LIBTORRENT_VER == env.LATEST_LIBTORRENT_VER && matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
       - name: Build and push Docker image
         id: build-and-push
@@ -99,6 +111,21 @@ jobs:
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
             QT_VERSION=${{ steps.qt.outputs.version }}
             CACHEBUST=${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Verify image
+        id: verify
+        run: |
+          DOCKER_TAG=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}
+          if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi 
+          docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
+          python -m pip install qbittorrent-api
+          docker logs qbt
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
 
       - name: Send mail
         if: failure()
