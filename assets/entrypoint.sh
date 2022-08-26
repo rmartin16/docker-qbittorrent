@@ -26,6 +26,8 @@ fi
 
 # those are owned by root by default
 # don't change existing files owner in `$downloadsPath`
+mkdir -p "$downloadsPath"
+mkdir -p "$profilePath"
 chown qbtUser:qbtUser "$downloadsPath"
 chown qbtUser:qbtUser -R "$profilePath"
 

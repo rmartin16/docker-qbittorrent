@@ -26,6 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         QBITTORRENT_VER: [ "master", "v4_4_x", "v4_3_x" ]
+        QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
         LIBTORRENT_VER: [ "2.0.7" ]
         BOOST_VERSION: [ "1_80_0" ]
 
@@ -74,7 +75,8 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=raw,value=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
       - name: Build and push Docker image
         id: build-and-push
@@ -90,6 +92,7 @@ jobs:
             BOOST_VERSION=${{ matrix.BOOST_VERSION }}
             LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
             QBT_VERSION=${{ matrix.QBITTORRENT_VER }}
+            QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
             QT_VERSION=${{ steps.qt.outputs.version }}
             CACHEBUST=${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
 
