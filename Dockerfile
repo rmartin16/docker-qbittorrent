@@ -1,33 +1,36 @@
 FROM alpine:latest AS builder
 
+ENV BASEPATH="/build"
+
 RUN apk --update-cache add \
       automake \
       build-base \
       cmake \
       curl \
       git \
+      icu-dev \
+      libexecinfo-dev \
       libtool \
       linux-headers \
       perl \
       pkgconf \
       python3 \
       python3-dev \
+      openssl-dev \
       re2c \
       tar \
-      icu-dev \
-      libexecinfo-dev \
-      openssl-dev \
       zlib-dev
 
 ARG QT_VERSION="qt6"
-RUN apk --update-cache add \
-      ${QT_VERSION}-qtbase-dev \
-      ${QT_VERSION}-qttools-dev
+RUN apk add ${QT_VERSION}-qtbase-dev ${QT_VERSION}-qttools-dev
 
-RUN cd $HOME && \
-    git clone --shallow-submodules --recurse-submodules https://github.com/ninja-build/ninja.git $HOME/ninja && \
-    cd $HOME/ninja && \
-    git checkout "$(git tag -l --sort=-v:refname "v*" | head -n 1)" && \
+WORKDIR "${BASEPATH}"
+COPY ./downloads/* .
+
+WORKDIR "${BASEPATH}"
+RUN git clone --shallow-submodules --recurse-submodules https://github.com/ninja-build/ninja.git "${BASEPATH}/ninja"
+WORKDIR "${BASEPATH}/ninja"
+RUN git checkout "$(git tag -l --sort=-v:refname "v*" | head -n 1)" && \
     cmake \
       -Wno-dev \
       -B build \
@@ -38,15 +41,19 @@ RUN cd $HOME && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
+WORKDIR "${BASEPATH}"
 ARG BOOST_VERSION="1_76_0"
-RUN BOOST_RELEASE_URL="https://boostorg.jfrog.io/artifactory/main/release/$(echo ${BOOST_VERSION} | sed 's/_/\./g')/source/boost_${BOOST_VERSION}.tar.gz" && \
-    curl -sNLk ${BOOST_RELEASE_URL} | tar zxf - -C "$HOME"
+RUN if [[ ! -f "boost_${BOOST_VERSION}.tar.gz" ]]; then \
+      BOOST_RELEASE_URL="https://boostorg.jfrog.io/artifactory/main/release/$(echo ${BOOST_VERSION} | sed 's/_/\./g')/source/boost_${BOOST_VERSION}.tar.gz" && \
+      curl -NLk ${BOOST_RELEASE_URL} -o "boost_${BOOST_VERSION}.tar.gz" ; \
+    fi && \
+    tar zxf "boost_${BOOST_VERSION}.tar.gz" -C "${BASEPATH}"
 
+WORKDIR "${BASEPATH}"
 ARG LIBTORRENT_VERSION
-RUN cd $HOME && \
-    git clone --shallow-submodules --recurse-submodules https://github.com/arvidn/libtorrent.git $HOME/libtorrent && \
-    cd $HOME/libtorrent && \
-    if [ "${LIBTORRENT_VERSION}" = "v2-latest" ]; then \
+RUN git clone --shallow-submodules --recurse-submodules https://github.com/arvidn/libtorrent.git "${BASEPATH}/libtorrent"
+WORKDIR "${BASEPATH}/libtorrent"
+RUN if [ "${LIBTORRENT_VERSION}" = "v2-latest" ]; then \
       git checkout "$(git tag -l --sort=-v:refname "v2*" | head -n 1)" ; \
     elif [ "${LIBTORRENT_VERSION}" = "v1-latest" ]; then \
       git checkout "$(git tag -l --sort=-v:refname "v1*" | head -n 1)" ; \
@@ -59,15 +66,16 @@ RUN cd $HOME && \
       -B build \
       -D CMAKE_BUILD_TYPE="Release" \
       -D CMAKE_CXX_STANDARD=17 \
-      -D BOOST_INCLUDEDIR="$HOME/boost_${BOOST_VERSION}/" \
+      -D BOOST_INCLUDEDIR="${BASEPATH}/boost_${BOOST_VERSION}/" \
       -D CMAKE_INSTALL_LIBDIR="lib" \
       -D CMAKE_INSTALL_PREFIX="/usr/local" && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
+WORKDIR "${BASEPATH}"
 ARG CACHEBUST=1
 ARG QBT_VERSION
-RUN cd $HOME && echo ${CACHEBUST} && \
+RUN echo ${CACHEBUST} && \
     if [[ "${QBT_VERSION}" = "master" ]] ; then \
       QBT_DIR="qBittorrent-${QBT_VERSION}" && \
       QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ; \
@@ -78,15 +86,16 @@ RUN cd $HOME && echo ${CACHEBUST} && \
       QBT_DIR="qBittorrent-release-${QBT_VERSION}" && \
       QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz" ; \
     fi && \
-    curl -sNLk ${QBT_URL} | tar -zxf - -C "$HOME" && \
-    cd "$HOME/${QBT_DIR}" && \
-    cmake \
+    curl -sNLk ${QBT_URL} | tar -zxf - -C "${BASEPATH}" && \
+    mv "${QBT_DIR}" "qBittorrent"
+WORKDIR "${BASEPATH}/qBittorrent"
+RUN cmake \
       -B build \
       -G Ninja \
       -D CMAKE_BUILD_TYPE="release" \
       -D CMAKE_CXX_STANDARD=17 \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D BOOST_INCLUDEDIR="$HOME/boost_${BOOST_VERSION}/" \
+      -D BOOST_INCLUDEDIR="${BASEPATH}/boost_${BOOST_VERSION}/" \
       -D CMAKE_CXX_STANDARD_LIBRARIES="/usr/lib/libexecinfo.so" \
       -D CMAKE_INSTALL_PREFIX="/usr/local" \
       -D QBT_VER_STATUS= \
@@ -99,17 +108,14 @@ RUN cd $HOME && echo ${CACHEBUST} && \
 
 FROM alpine:latest
 
-RUN apk --no-cache add doas python3 tini
-
 ARG QT_VERSION="qt6"
-RUN apk --no-cache add ${QT_VERSION}-qtbase
-
-RUN adduser -D -H -s /sbin/nologin -u 1000 qbtUser && \
+RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
+    adduser -D -H -s /sbin/nologin -u 1000 qbtUser && \
     echo "permit nopass :root" >> "/etc/doas.d/doas.conf"
 
 COPY --from=builder /usr/local/lib/libtorrent-rasterbar* /usr/local/lib/
 COPY --from=builder /usr/local/bin/qbittorrent-nox /usr/bin/qbittorrent-nox
 
-COPY entrypoint.sh /entrypoint.sh
+COPY assets/entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/sbin/tini", "-g", "--", "/entrypoint.sh"]

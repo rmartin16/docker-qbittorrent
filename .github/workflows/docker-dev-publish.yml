@@ -12,6 +12,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: rmartin16/qbittorrent-nox
+  CACHE_VER: "1"
 
 jobs:
 
@@ -32,6 +33,21 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Cache sources
+        id: cache-sources
+        uses: actions/cache@v3
+        with:
+          path: ./downloads
+          key: sources-${{ env.CACHE_VER }}-${{ matrix.BOOST_VERSION }}
+
+      - name: Download sources
+        if: steps.cache-sources.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ./downloads
+          curl -NLk \
+            "https://boostorg.jfrog.io/artifactory/main/release/$(echo ${{ matrix.BOOST_VERSION }} | sed 's/_/\./g')/source/boost_${{ matrix.BOOST_VERSION }}.tar.gz" \
+            -o "./downloads/boost_${{ matrix.BOOST_VERSION }}.tar.gz"
 
       - name: Determine Qt Version
         id: qt
