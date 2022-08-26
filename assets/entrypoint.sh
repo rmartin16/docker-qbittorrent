@@ -13,8 +13,6 @@ Session\Port=6881
 Session\TempPath=/downloads/temp
 [LegalNotice]
 Accepted=false
-[RSS]
-Session\EnableProcessing=true
 EOF
 
     if [ "$QBT_EULA" = "accept" ]; then

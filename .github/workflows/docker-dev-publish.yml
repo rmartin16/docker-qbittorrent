@@ -27,8 +27,9 @@ jobs:
       matrix:
         QBITTORRENT_VER: [ "master", "v4_4_x", "v4_3_x" ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
-        LIBTORRENT_VER: [ "2.0.7" ]
-        BOOST_VERSION: [ "1_80_0" ]
+        include:
+          - LIBTORRENT_VER: "2.0.7"
+          - BOOST_VERSION: "1_80_0"
 
     steps:
 
@@ -76,7 +77,7 @@ jobs:
             latest=false
           tags: |
             type=raw,value=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
-            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
       - name: Build and push Docker image
         id: build-and-push
@@ -85,6 +86,7 @@ jobs:
           context: .
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          load: true
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -95,6 +97,21 @@ jobs:
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
             QT_VERSION=${{ steps.qt.outputs.version }}
             CACHEBUST=${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Verify image
+        id: verify
+        run: |
+          DOCKER_TAG=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}
+          if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi 
+          docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
+          python -m pip install qbittorrent-api
+          docker logs qbt
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
 
       - name: Send mail
         if: failure()
