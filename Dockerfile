@@ -31,9 +31,7 @@ WORKDIR "${BASEPATH}"
 RUN git clone --shallow-submodules --recurse-submodules https://github.com/ninja-build/ninja.git "${BASEPATH}/ninja"
 WORKDIR "${BASEPATH}/ninja"
 RUN git checkout "$(git tag -l --sort=-v:refname "v*" | head -n 1)" && \
-    cmake \
-      -Wno-dev \
-      -B build \
+    cmake -Wno-dev -B build \
       -D CMAKE_CXX_COMPILER=/usr/bin/g++ \
       -D CMAKE_C_COMPILER=/usr/bin/gcc \
       -D CMAKE_CXX_STANDARD=17 \
@@ -60,10 +58,7 @@ RUN if [ "${LIBTORRENT_VERSION}" = "v2-latest" ]; then \
     else \
       git checkout v"${LIBTORRENT_VERSION}" ; \
     fi && \
-    cmake \
-      -Wno-dev \
-      -G Ninja \
-      -B build \
+    cmake -Wno-dev -G Ninja -B build \
       -D CMAKE_BUILD_TYPE="Release" \
       -D CMAKE_CXX_STANDARD=17 \
       -D BOOST_INCLUDEDIR="${BASEPATH}/boost_${BOOST_VERSION}/" \
@@ -89,19 +84,18 @@ RUN echo ${CACHEBUST} && \
     curl -sNLk ${QBT_URL} | tar -zxf - -C "${BASEPATH}" && \
     mv "${QBT_DIR}" "qBittorrent"
 WORKDIR "${BASEPATH}/qBittorrent"
-RUN cmake \
-      -B build \
-      -G Ninja \
-      -D CMAKE_BUILD_TYPE="release" \
+ARG QBT_BUILD_TYPE="release"
+RUN cmake -Wno-dev -B build -G Ninja \
+      -D CMAKE_BUILD_TYPE=${QBT_BUILD_TYPE} \
       -D CMAKE_CXX_STANDARD=17 \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
       -D BOOST_INCLUDEDIR="${BASEPATH}/boost_${BOOST_VERSION}/" \
       -D CMAKE_CXX_STANDARD_LIBRARIES="/usr/lib/libexecinfo.so" \
       -D CMAKE_INSTALL_PREFIX="/usr/local" \
       -D QBT_VER_STATUS= \
       -D GUI=OFF \
       -D QT6=ON \
-      -D STACKTRACE=OFF && \
+      -D STACKTRACE=OFF \
+      -D VERBOSE_CONFIGURE=ON && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
