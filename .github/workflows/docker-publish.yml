@@ -10,6 +10,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: rmartin16/qbittorrent-nox
+  CACHE_VER: "1"
+  LATEST_QBT_VER: "4.4.4"
+  LATEST_LIBTORRENT_VER: "2.0.7"
 
 jobs:
 
@@ -33,6 +36,21 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Cache sources
+        id: cache-sources
+        uses: actions/cache@v3
+        with:
+          path: ./downloads
+          key: sources-${{ env.CACHE_VER }}-${{ matrix.BOOST_VERSION }}
+
+      - name: Download sources
+        if: steps.cache-sources.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ./downloads
+          curl -NLk \
+            "https://boostorg.jfrog.io/artifactory/main/release/$(echo ${{ matrix.BOOST_VERSION }} | sed 's/_/\./g')/source/boost_${{ matrix.BOOST_VERSION }}.tar.gz" \
+            -o "./downloads/boost_${{ matrix.BOOST_VERSION }}.tar.gz"
 
       - name: Determine Qt Version
         id: qt
@@ -60,6 +78,7 @@ jobs:
             latest=false
           tags: |
             type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}
+            type=raw,value=latest,enable=${{ matrix.QBITTORRENT_VER == env.LATEST_QBT_VER && matrix.LIBTORRENT_VER == env.LATEST_LIBTORRENT_VER }}
 
       - name: Build and push Docker image
         id: build-and-push
