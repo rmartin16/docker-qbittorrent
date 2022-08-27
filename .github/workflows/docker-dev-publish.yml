@@ -16,8 +16,28 @@ env:
 
 jobs:
 
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      libtorrent-latest-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-latest-version }}
+
+    steps:
+      - name: Declare libtorrent Versions
+        id: set-libtorrent-versions
+        run: |
+          LATEST_VER=$( \
+            git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/arvidn/libtorrent.git | \
+            cut --delimiter='/' --fields=3 | \
+            grep '^v2\.' | \
+            tail --lines 1 \
+          )
+          echo "Latest: ${LATEST_VER:1}"
+          echo "::set-output name=libtorrent-latest-version::${LATEST_VER:1}"
+
   build:
     runs-on: ubuntu-latest
+    needs: setup
     permissions:
       contents: read
       packages: write
@@ -28,7 +48,7 @@ jobs:
         QBITTORRENT_VER: [ "master", "v4_4_x", "v4_3_x" ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
         include:
-          - LIBTORRENT_VER: "2.0.7"
+          - LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-latest-version }}
           - BOOST_VERSION: "1_80_0"
 
     steps:
@@ -75,8 +95,19 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
             latest=false
+          labels: |
+            maintainer=${{ github.repository_owner }}
+            org.opencontainers.image.title=qbittorrent-nox
+            org.opencontainers.image.description=Headless qBittorrent ${{ matrix.QBITTORRENT_VER }} with libtorrent v${{ matrix.LIBTORRENT_VER }}
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
+            # master - specific qBittorrent with latest libtorrent
+            type=raw,value=${{ matrix.QBITTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-latest-version }}
+            # master-debug - specific debug qBittorrent with latest libtorrent
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-latest-version }}
+            # master-2.0.7 - specific qBittorrent with specific libtorrent
             type=raw,value=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
+            # master-2.0.7-debug - specific debug qBittorrent with specific libtorrent
             type=raw,value=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
       - name: Build and push Docker image
@@ -98,15 +129,17 @@ jobs:
             CACHEBUST=${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
 
       - name: Set up Python
+        if: github.event_name != 'pull_request'
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
       - name: Verify image
+        if: github.event_name != 'pull_request'
         id: verify
         run: |
           DOCKER_TAG=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}
-          if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi 
+          if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
           docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
           python -m pip install qbittorrent-api
           docker logs qbt
