@@ -1,0 +1,128 @@
+name: Publish Legacy Release Images
+
+on:
+  schedule:
+    - cron: "36 6 16 * *"
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: rmartin16/qbittorrent-nox
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        QBITTORRENT_VER: [ "4.1.0","4.1.1","4.1.2","4.1.3","4.1.4","4.1.5","4.1.6","4.1.7","4.1.8","4.1.9","4.1.9.1","4.2.0","4.2.1","4.2.2","4.2.3","4.2.4","4.2.5" ]
+        QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
+        include:
+          - LIBTORRENT_VER: "1_1_14"
+          - QBITTORRENT_VER: "4.2.0"
+            LIBTORRENT_VER: "1.2.17"
+          - QBITTORRENT_VER: "4.2.1"
+            LIBTORRENT_VER: "1.2.17"
+          - QBITTORRENT_VER: "4.2.2"
+            LIBTORRENT_VER: "1.2.17"
+          - QBITTORRENT_VER: "4.2.3"
+            LIBTORRENT_VER: "1.2.17"
+          - QBITTORRENT_VER: "4.2.4"
+            LIBTORRENT_VER: "1.2.17"
+          - QBITTORRENT_VER: "4.2.5"
+            LIBTORRENT_VER: "1.2.17"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          labels: |
+            maintainer=${{ github.repository_owner }}
+            org.opencontainers.image.title=qbittorrent-nox
+            org.opencontainers.image.description=Headless qBittorrent v${{ matrix.QBITTORRENT_VER }} with libtorrent v${{ matrix.LIBTORRENT_VER }}
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+          tags: |
+            # v4.2.5 - specific qBittorrent with latest libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
+            # v4.2.5-1.2.17 - specific qBittorrent with specific libtorrent version
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
+            # v4.2.5-debug - specific debug qBittorrent with latest libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
+            # v4.2.5-1.2.17-debug - specific debug qBittorrent with specific libtorrent version
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: Dockerfile-legacy
+          build-args: |
+            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+            QBT_VERSION=${{ matrix.QBITTORRENT_VER }}
+            QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
+            CACHEBUST=${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
+
+      - name: Set up Python
+        if: github.event_name != 'pull_request'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Verify image
+        if: github.event_name != 'pull_request'
+        id: verify
+        run: |
+          DOCKER_TAG=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}
+          if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
+          docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
+          python -m pip install qbittorrent-api
+          docker logs qbt
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
+
+      - name: Send mail
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: ${{ github.job }} job of ${{ github.repository }} failed
+          body: |
+            ${{ github.job }} job in workflow ${{ github.workflow }} of ${{ github.repository }} failed.
+            https://github.com/rmartin16/qbittorrent-api/actions/runs/${{ github.run_id }}
+          to: rmartin16+github-action@gmail.com   # comma-separated string
+          from: rmartin16+github-action@gmail.com
