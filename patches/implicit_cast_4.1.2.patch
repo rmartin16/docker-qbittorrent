@@ -1,0 +1,18 @@
+--- src/base/preferences.cpp
++++ src/base/preferences.cpp
+@@ -530,7 +530,7 @@
+ QString Preferences::getServerDomains() const
+ {
+-    return value("Preferences/WebUI/ServerDomains", '*').toString();
++    return value("Preferences/WebUI/ServerDomains", QChar('*')).toString();
+ }
+
+ void Preferences::setServerDomains(const QString &str)
+
+@@ -540,7 +540,7 @@
+
+ QString Preferences::getWebUiAddress() const
+ {
+-    return value("Preferences/WebUI/Address", '*').toString().trimmed();
++    return value("Preferences/WebUI/Address", QChar('*')).toString().trimmed();
+ }

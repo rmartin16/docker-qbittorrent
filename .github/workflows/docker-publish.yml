@@ -1,5 +1,11 @@
 name: Publish Release Images
 
+########################################################
+#
+# Builds qBittorrent v4.3.0+
+#
+########################################################
+
 on:
   schedule:
     - cron: "36 6 */7 * *"
@@ -80,20 +86,13 @@ jobs:
         include:
           - BOOST_VERSION: "1_80_0"
         exclude:
+          # exclude older libtorrent versions
           - LIBTORRENT_VER: "2.0.0"
           - LIBTORRENT_VER: "2.0.1"
           - LIBTORRENT_VER: "2.0.2"
           - LIBTORRENT_VER: "2.0.3"
           - LIBTORRENT_VER: "2.0.4"
           - LIBTORRENT_VER: "2.0.5"
-          - LIBTORRENT_VER: "2.0.6"
-          # incompatible with later versions of libtorrent (qbittorrent/qBittorrent/13981#issuecomment-746836281)
-          - QBITTORRENT_VER: "4.3.0"
-            QBITTORRENT_BUILD_TYPE: "debug"
-          - QBITTORRENT_VER: "4.3.0.1"
-            QBITTORRENT_BUILD_TYPE: "debug"
-          - QBITTORRENT_VER: "4.3.1"
-            QBITTORRENT_BUILD_TYPE: "debug"
 
     steps:
       - name: Checkout repository

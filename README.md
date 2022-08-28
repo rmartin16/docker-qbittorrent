@@ -1,5 +1,5 @@
 # docker-qbittorrent
-Build images for qBittorrent `v4.3.0+`. Uses `qt6` for `v4.4.0+`.
+Build images for qBittorrent `v4.1.0+`. Uses `qt6` for `v4.4.0+`.
 
 ## Build
     docker buildx build \

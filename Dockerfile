@@ -1,3 +1,8 @@
+########################################################
+#
+# Builds qBittorrent v4.3.0+
+#
+########################################################
 FROM alpine:latest AS builder
 
 ENV BASEPATH="/build"
@@ -12,6 +17,7 @@ RUN apk --update-cache add \
       libexecinfo-dev \
       libtool \
       linux-headers \
+      patch \
       perl \
       pkgconf \
       python3 \
@@ -25,7 +31,8 @@ ARG QT_VERSION="qt6"
 RUN apk add ${QT_VERSION}-qtbase-dev ${QT_VERSION}-qttools-dev
 
 WORKDIR "${BASEPATH}"
-COPY ./downloads/* .
+COPY ./downloads/* ./
+COPY ./patches/* ./patches/
 
 WORKDIR "${BASEPATH}"
 RUN git clone --shallow-submodules --recurse-submodules https://github.com/ninja-build/ninja.git "${BASEPATH}/ninja"
@@ -82,7 +89,11 @@ RUN echo ${CACHEBUST} && \
       QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz" ; \
     fi && \
     curl -sNLk ${QBT_URL} | tar -zxf - -C "${BASEPATH}" && \
-    mv "${QBT_DIR}" "qBittorrent"
+    mv "${BASEPATH}/${QBT_DIR}" "${BASEPATH}/qBittorrent"
+# https://github.com/qbittorrent/qBittorrent/issues/13981#issuecomment-746836281
+RUN if [[ "${QBT_VERSION}" = "4.3.0" || "${QBT_VERSION}" = "4.3.0.1" || "${QBT_VERSION}" = "4.3.1" ]] ; then \
+        patch "${BASEPATH}/qBittorrent/src/base/bittorrent/session.cpp" "${BASEPATH}/patches/libtorrent_2_compat_early_4.3.0.patch" ; \
+    fi
 WORKDIR "${BASEPATH}/qBittorrent"
 ARG QBT_BUILD_TYPE="release"
 RUN cmake -Wno-dev -B build -G Ninja \

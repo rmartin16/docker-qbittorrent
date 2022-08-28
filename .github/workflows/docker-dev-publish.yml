@@ -1,5 +1,11 @@
 name: Publish Dev Images
 
+########################################################
+#
+# Builds qBittorrent from dev branches
+#
+########################################################
+
 on:
   schedule:
     - cron: "36 */6 * * *"
@@ -20,20 +26,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      libtorrent-versions: ${{ steps.set-libtorrent-versions.outputs.libtorrent-versions }}
       libtorrent-latest-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-latest-version }}
 
     steps:
       - name: Declare libtorrent Versions
         id: set-libtorrent-versions
         run: |
-          LATEST_VER=$( \
+          VERS=$( \
             git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/arvidn/libtorrent.git | \
             cut --delimiter='/' --fields=3 | \
-            grep '^v2\.' | \
-            tail --lines 1 \
+            grep '^v2\.' \
           )
-          echo "Latest: ${LATEST_VER:1}"
-          echo "::set-output name=libtorrent-latest-version::${LATEST_VER:1}"
+          
+          LATEST_VER=$(echo ${VERS} | rev | cut -d' ' -f1 | rev | sed 's/v//')
+          echo "Latest: ${LATEST_VER}"
+          echo "::set-output name=libtorrent-latest-version::${LATEST_VER}"
+
+          VERS_MATRIX_LIST=$(echo ${VERS} | sed 's/v//g' | sed -z 's/ /","/g;s/,$/\n/')
+          VERS_MATRIX_LIST="[\"${VERS_MATRIX_LIST}\"]"
+          echo ${VERS_MATRIX_LIST}
+          echo "::set-output name=libtorrent-versions::${VERS_MATRIX_LIST}"
 
   build:
     runs-on: ubuntu-latest
@@ -47,9 +60,20 @@ jobs:
       matrix:
         QBITTORRENT_VER: [ "master", "v4_4_x", "v4_3_x" ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
+        LIBTORRENT_VER: ${{ fromJson(needs.setup.outputs.libtorrent-versions) }}
         include:
-          - LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-latest-version }}
           - BOOST_VERSION: "1_80_0"
+        exclude:
+          # exclude older libtorrent versions
+          - LIBTORRENT_VER: "2.0.0"
+          - LIBTORRENT_VER: "2.0.1"
+          - LIBTORRENT_VER: "2.0.2"
+          - LIBTORRENT_VER: "2.0.3"
+          - LIBTORRENT_VER: "2.0.4"
+          - LIBTORRENT_VER: "2.0.5"
+          # master branch requires libtorrent v2.0.7 minimum
+          - LIBTORRENT_VER: "2.0.6"
+            QBITTORRENT_VER: "master"
 
     steps:
 
