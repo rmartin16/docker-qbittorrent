@@ -28,8 +28,8 @@ jobs:
     outputs:
       qbittorrent-versions: ${{ steps.set-qbittorrent-versions.outputs.qbittorrent-versions }}
       qbittorrent-latest-version: ${{ steps.set-qbittorrent-versions.outputs.qbittorrent-latest-version }}
-      libtorrent-versions: ${{ steps.set-libtorrent-versions.outputs.libtorrent-versions }}
-      libtorrent-latest-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-latest-version }}
+      libtorrent-v1-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v1-version }}
+      libtorrent-v2-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v2-version }}
 
     steps:
       - name: Declare qBittorrent Versions
@@ -55,20 +55,25 @@ jobs:
       - name: Declare libtorrent Versions
         id: set-libtorrent-versions
         run: |
-          VERS=$( \
-            git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/arvidn/libtorrent.git | \
+          LATEST_V2=$( \
+            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
             cut --delimiter='/' --fields=3 | \
-            grep '^v2\.' \
+            grep '^v2\.' | \
+            head -n1 | \
+            sed 's/v//' \
           )
-          
-          LATEST_VER=$(echo ${VERS} | rev | cut -d' ' -f1 | rev | sed 's/v//')
-          echo "Latest: ${LATEST_VER}"
-          echo "::set-output name=libtorrent-latest-version::${LATEST_VER}"
+          echo "Latest v2: ${LATEST_V2}"
+          echo "::set-output name=libtorrent-v2-version::${LATEST_V2}"
 
-          VERS_MATRIX_LIST=$(echo ${VERS} | sed 's/v//g' | sed -z 's/ /","/g;s/,$/\n/')
-          VERS_MATRIX_LIST="[\"${VERS_MATRIX_LIST}\"]"
-          echo ${VERS_MATRIX_LIST}
-          echo "::set-output name=libtorrent-versions::${VERS_MATRIX_LIST}"
+          LATEST_V1=$( \
+            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
+            cut --delimiter='/' --fields=3 | \
+            grep '^v1\.2' | \
+            head -n1 | \
+            sed 's/v//' \
+          )
+          echo "Latest v1: ${LATEST_V1}"
+          echo "::set-output name=libtorrent-v1-version::${LATEST_V1}"
 
   build:
     runs-on: ubuntu-latest
@@ -76,23 +81,15 @@ jobs:
     permissions:
       contents: read
       packages: write
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         QBITTORRENT_VER: ${{ fromJson(needs.setup.outputs.qbittorrent-versions) }}
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
-        LIBTORRENT_VER: ${{ fromJson(needs.setup.outputs.libtorrent-versions) }}
+        LIBTORRENT_VER: [ "${{ needs.setup.outputs.libtorrent-v2-version }}", "${{ needs.setup.outputs.libtorrent-v1-version }}" ]
         include:
           - BOOST_VERSION: "1_80_0"
-        exclude:
-          # exclude older libtorrent versions
-          - LIBTORRENT_VER: "2.0.0"
-          - LIBTORRENT_VER: "2.0.1"
-          - LIBTORRENT_VER: "2.0.2"
-          - LIBTORRENT_VER: "2.0.3"
-          - LIBTORRENT_VER: "2.0.4"
-          - LIBTORRENT_VER: "2.0.5"
 
     steps:
       - name: Checkout repository
@@ -144,26 +141,39 @@ jobs:
             org.opencontainers.image.description=Headless qBittorrent v${{ matrix.QBITTORRENT_VER }} with libtorrent v${{ matrix.LIBTORRENT_VER }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
-            # v4.4.4 - specific qBittorrent with latest libtorrent
-            type=raw,value=v${{ matrix.QBITTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-latest-version }}
-            # v4.4.4-2.0.7 - specific qBittorrent with specific libtorrent version
-            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
-            # v4.4.4-debug - specific debug qBittorrent with latest libtorrent
-            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-latest-version }}
-            # v4.4.4-2.0.7-debug - specific debug qBittorrent with specific libtorrent version
-            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
-            # latest - latest qBittorrent with latest libtorrent
-            type=raw,value=latest,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
-            # debug - latest debug qBittorrent with latest libtorrent
-            type=raw,value=debug,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
+            # latest - latest qBittorrent with latest v2 libtorrent
+            type=raw,value=latest,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # latest-v2 - latest qBittorrent with latest v2 libtorrent
+            type=raw,value=latest-v2,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # latest-v1 - latest qBittorrent with latest v2 libtorrent
+            type=raw,value=latest-v1,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v1-version }}
+            # latest-debug - latest debug qBittorrent with latest v2 libtorrent
+            type=raw,value=latest-debug,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # latest-v2-debug - latest debug qBittorrent with latest v2 libtorrent
+            type=raw,value=latest-v2-debug,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # latest-v1-debug - latest debug qBittorrent with latest v2 libtorrent
+            type=raw,value=latest-v1-debug,enable=${{ matrix.QBITTORRENT_VER == needs.setup.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v1-version }}
+            # v4.4.4 - specific qBittorrent with latest v2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # v4.4.4-v2 - specific qBittorrent with latest v2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-v2,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # v4.4.4-v1 - specific qBittorrent with latest v1 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-v1,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v1-version }}
+            # v4.4.4-debug - specific debug qBittorrent with latest v2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # v4.4.4-v2-debug - specific debug qBittorrent with latest v2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-v2-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            # v4.4.4-v1-debug - specific debug qBittorrent with latest v1 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VER }}-v1-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v1-version }}
 
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v3
         with:
           context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # fails too often with github API connection errors
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -185,12 +195,13 @@ jobs:
         if: github.event_name != 'pull_request'
         id: verify
         run: |
-          DOCKER_TAG=v${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_VER }}
+          if [[ "${{ matrix.LIBTORRENT_VER }}" = "1."* ]]; then VER="v1"; else VER="v2"; fi
+          DOCKER_TAG=v${{ matrix.QBITTORRENT_VER }}-${VER}
           if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
           docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
           python -m pip install qbittorrent-api
           docker logs qbt
-          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); assert client.app.version=="v${{ matrix.QBITTORRENT_VER }}"'
 
       - name: Send mail
         if: failure()
@@ -203,6 +214,6 @@ jobs:
           subject: ${{ github.job }} job of ${{ github.repository }} failed
           body: |
             ${{ github.job }} job in workflow ${{ github.workflow }} of ${{ github.repository }} failed.
-            https://github.com/rmartin16/qbittorrent-api/actions/runs/${{ github.run_id }}
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: rmartin16+github-action@gmail.com   # comma-separated string
           from: rmartin16+github-action@gmail.com

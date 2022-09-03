@@ -96,10 +96,11 @@ RUN if [[ "${QBT_VERSION}" = "4.3.0" || "${QBT_VERSION}" = "4.3.0.1" || "${QBT_V
     fi
 WORKDIR "${BASEPATH}/qBittorrent"
 ARG QBT_BUILD_TYPE="release"
-RUN cmake -Wno-dev -B build -G Ninja \
+RUN cmake -Wno-dev -Wno-deprecated -B build -G Ninja \
       -D CMAKE_BUILD_TYPE=${QBT_BUILD_TYPE} \
       -D CMAKE_CXX_STANDARD=17 \
       -D BOOST_INCLUDEDIR="${BASEPATH}/boost_${BOOST_VERSION}/" \
+      -D Boost_NO_BOOST_CMAKE=TRUE \
       -D CMAKE_CXX_STANDARD_LIBRARIES="/usr/lib/libexecinfo.so" \
       -D CMAKE_INSTALL_PREFIX="/usr/local" \
       -D QBT_VER_STATUS= \

@@ -86,6 +86,7 @@ RUN apt update && \
       python3 \
       qtbase5-dev \
       tini && \
+    addgroup qbtUser --force-badname && \
     adduser \
       --quiet \
       --system \
@@ -100,6 +101,6 @@ RUN apt update && \
 COPY --from=builder /build/libtorrent/install/* /build/libtorrent/install/
 COPY --from=builder /usr/local/bin/qbittorrent-nox /usr/bin/qbittorrent-nox
 
-COPY assets/entrypoint-legacy.sh /entrypoint.sh
+COPY assets/entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/entrypoint.sh"]
