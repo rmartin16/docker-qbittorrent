@@ -140,18 +140,3 @@ jobs:
           python -m pip install qbittorrent-api
           docker logs qbt
           python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
-
-      - name: Send mail
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: ${{ github.job }} job of ${{ github.repository }} failed
-          body: |
-            ${{ github.job }} job in workflow ${{ github.workflow }} of ${{ github.repository }} failed.
-            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          to: rmartin16+github-action@gmail.com   # comma-separated string
-          from: rmartin16+github-action@gmail.com
