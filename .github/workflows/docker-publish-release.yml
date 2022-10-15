@@ -45,12 +45,12 @@ jobs:
 
           LATEST_VER=$(echo ${VERS} | rev | cut -d' ' -f1 | rev)
           echo "Latest: ${LATEST_VER}"
-          echo "::set-output name=qbittorrent-latest-version::${LATEST_VER}"
+          echo "qbittorrent-latest-version=${LATEST_VER}" >> ${GITHUB_OUTPUT}
 
           VERS_MATRIX_LIST=$(echo ${VERS} | sed -z 's/ /","/g;s/,$/\n/')
           VERS_MATRIX_LIST="[\"${VERS_MATRIX_LIST}\"]"
           echo ${VERS_MATRIX_LIST}
-          echo "::set-output name=qbittorrent-versions::${VERS_MATRIX_LIST}"
+          echo "qbittorrent-versions=${VERS_MATRIX_LIST}" >> ${GITHUB_OUTPUT}
 
       - name: Declare libtorrent Versions
         id: set-libtorrent-versions
@@ -63,7 +63,7 @@ jobs:
             sed 's/v//' \
           )
           echo "Latest v2: ${LATEST_V2}"
-          echo "::set-output name=libtorrent-v2-version::${LATEST_V2}"
+          echo "libtorrent-v2-version=${LATEST_V2}" >> ${GITHUB_OUTPUT}
 
           LATEST_V1=$( \
             git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
@@ -73,7 +73,7 @@ jobs:
             sed 's/v//' \
           )
           echo "Latest v1: ${LATEST_V1}"
-          echo "::set-output name=libtorrent-v1-version::${LATEST_V1}"
+          echo "libtorrent-v1-version=${LATEST_V1}" >> ${GITHUB_OUTPUT}
 
   build:
     runs-on: ubuntu-latest
@@ -113,9 +113,9 @@ jobs:
       - name: Determine Qt Version
         id: qt
         run: |
-          echo ::set-output name=version::"qt6"
-          if [[ ${{ matrix.QBITTORRENT_VER }} = 4.3* ]]; then echo ::set-output name=version::"qt5"; fi
-          if [[ ${{ matrix.QBITTORRENT_VER }} = 4.4.0beta* ]]; then echo ::set-output name=version::"qt5"; fi
+          echo "version=qt6" >> ${GITHUB_OUTPUT}
+          if [[ ${{ matrix.QBITTORRENT_VER }} = 4.3* ]]; then echo "version=qt5" >> ${GITHUB_OUTPUT}; fi
+          if [[ ${{ matrix.QBITTORRENT_VER }} = 4.4.0beta* ]]; then echo "version=qt5" >> ${GITHUB_OUTPUT}; fi
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v2
