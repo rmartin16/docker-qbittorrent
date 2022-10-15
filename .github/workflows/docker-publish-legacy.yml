@@ -40,7 +40,7 @@ jobs:
             sed 's/v//' \
           )
           echo "Latest v1: ${LATEST_V1}"
-          echo "::set-output name=libtorrent-v1-version::${LATEST_V1}"
+          echo "libtorrent-v1-version=${LATEST_V1}" >> ${GITHUB_OUTPUT}
 
   build:
     runs-on: ubuntu-latest
