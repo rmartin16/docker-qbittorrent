@@ -8,7 +8,7 @@ name: Publish Dev Images
 
 on:
   schedule:
-    - cron: "36 */6 * * *"
+    - cron: "36 */12 * * *"
   push:
     branches: [ "main" ]
   pull_request:
