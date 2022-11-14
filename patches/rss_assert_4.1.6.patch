@@ -1,0 +1,12 @@
+diff --git a/src/base/rss/rss_feed.cpp b/src/base/rss/rss_feed.cpp
+index b66073c55..56b3b6a2d 100644
+--- a/src/base/rss/rss_feed.cpp
++++ b/src/base/rss/rss_feed.cpp
+@@ -344,7 +344,6 @@ void Feed::storeDeferred()
+ bool Feed::addArticle(Article *article)
+ {
+     Q_ASSERT(article);
+-    Q_ASSERT(!m_articles.contains(article->guid()));
+ 
+     // Insertion sort
+     const int maxArticles = m_session->maxArticlesPerFeed();

@@ -61,6 +61,9 @@ RUN echo ${CACHEBUST} && \
 RUN if [ "${QBT_VERSION}" = "4.1.2" ] ; then \
         patch "${BASEPATH}/qBittorrent/src/base/preferences.cpp" "${BASEPATH}/patches/implicit_cast_4.1.2.patch" ; \
     fi
+RUN if [ "${QBT_VERSION}" = "4.1.6" ] ; then \
+        patch "${BASEPATH}/qBittorrent/src/base/rss/rss_feed.cpp" "${BASEPATH}/patches/rss_assert_4.1.6.patch" ; \
+    fi
 WORKDIR "${BASEPATH}/qBittorrent"
 ARG QBT_BUILD_TYPE="release"
 RUN export libtorrent_CFLAGS="${BASEPATH}/libtorrent/build/include/" && \
