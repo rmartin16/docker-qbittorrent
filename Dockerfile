@@ -78,16 +78,17 @@ WORKDIR "${BASEPATH}"
 ARG CACHEBUST=1
 ARG QBT_VERSION
 RUN echo ${CACHEBUST} && \
-    if [[ "${QBT_VERSION}" = "master" ]] ; then \
-      QBT_DIR="qBittorrent-${QBT_VERSION}" && \
-      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ; \
-    elif [[ "${QBT_VERSION}" = "v4_4_x" || "${QBT_VERSION}" = "v4_3_x" ]] ; then \
-      QBT_DIR="qBittorrent-${QBT_VERSION:1}" && \
-      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ; \
-    else \
-      QBT_DIR="qBittorrent-release-${QBT_VERSION}" && \
-      QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz" ; \
-    fi && \
+    case ${QBT_VERSION} in \
+      master) \
+        QBT_DIR="qBittorrent-${QBT_VERSION}" && \
+        QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ;; \
+      v4_5_x | v4_4_x | v4_3_x) \
+        QBT_DIR="qBittorrent-${QBT_VERSION:1}" && \
+        QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ;; \
+      *) \
+        QBT_DIR="qBittorrent-release-${QBT_VERSION}" && \
+        QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz" ;; \
+    esac && \
     curl -sNLk ${QBT_URL} | tar -zxf - -C "${BASEPATH}" && \
     mv "${BASEPATH}/${QBT_DIR}" "${BASEPATH}/qBittorrent"
 # https://github.com/qbittorrent/qBittorrent/issues/13981#issuecomment-746836281

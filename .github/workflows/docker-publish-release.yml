@@ -35,7 +35,7 @@ jobs:
       - name: Declare qBittorrent Versions
         id: set-qbittorrent-versions
         run: |  # find all releases >= v4.3.0
-          VERS=$( \
+          ALL_VERS=$( \
             git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/qbittorrent/qBittorrent.git | \
             cut --delimiter='/' --fields=3 | \
             grep -v "\^{}" | \
@@ -43,11 +43,20 @@ jobs:
             grep '^4\.[3-9]\.\d*.' \
           )
 
-          LATEST_VER=$(echo ${VERS} | rev | cut -d' ' -f1 | rev)
+          FINAL_VERSION_VERS=$( \
+            git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/qbittorrent/qBittorrent.git | \
+            grep -vE 'beta|rc' | \
+            cut --delimiter='/' --fields=3 | \
+            grep -v "\^{}" | \
+            cut --delimiter='-' --fields=2 | \
+            grep '^4\.[3-9]\.\d*.' \
+          )
+
+          LATEST_VER=$(echo ${FINAL_VERSION_VERS} | rev | cut -d' ' -f1 | rev)
           echo "Latest: ${LATEST_VER}"
           echo "qbittorrent-latest-version=${LATEST_VER}" >> ${GITHUB_OUTPUT}
 
-          VERS_MATRIX_LIST=$(echo ${VERS} | sed -z 's/ /","/g;s/,$/\n/')
+          VERS_MATRIX_LIST=$(echo ${ALL_VERS} | sed -z 's/ /","/g;s/,$/\n/')
           VERS_MATRIX_LIST="[\"${VERS_MATRIX_LIST}\"]"
           echo ${VERS_MATRIX_LIST}
           echo "qbittorrent-versions=${VERS_MATRIX_LIST}" >> ${GITHUB_OUTPUT}

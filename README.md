@@ -40,7 +40,7 @@ qBittorrent dev branches
     docker pull ghcr.io/rmartin16/qbittorrent-nox:master-v2-debug
     docker pull ghcr.io/rmartin16/qbittorrent-nox:master-v1
     docker pull ghcr.io/rmartin16/qbittorrent-nox:master-v1-debug
-    [ same for v4_4_x and v4_3_x ]
+    [ same for v4_5_x, v4_4_x, and v4_3_x ]
 
 ## Build
     docker buildx build \

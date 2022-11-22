@@ -64,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        QBITTORRENT_VER: [ "master", "v4_4_x", "v4_3_x" ]
+        QBITTORRENT_VER: [ "master", "v4_5_x", "v4_4_x", "v4_3_x" ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
         LIBTORRENT_VER: [ "${{ needs.setup.outputs.libtorrent-v2-version }}", "${{ needs.setup.outputs.libtorrent-v1-version }}" ]
         include:
