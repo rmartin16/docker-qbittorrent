@@ -3,7 +3,7 @@
 # Builds qBittorrent v4.1.0 thru v4.2.5
 #
 ########################################################
-FROM ubuntu:latest AS builder
+FROM ubuntu:22.10 AS builder
 
 ENV BASEPATH="/build"
 
@@ -80,7 +80,7 @@ RUN export libtorrent_CFLAGS="${BASEPATH}/libtorrent/build/include/" && \
     make -j$(nproc) install
 
 
-FROM ubuntu:latest
+FROM ubuntu:22.10
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
