@@ -3,7 +3,7 @@
 # Builds qBittorrent v4.3.0+
 #
 ########################################################
-FROM alpine:3.16.3 AS builder
+FROM alpine:3.17.0 AS builder
 
 ENV BASEPATH="/build"
 
@@ -113,7 +113,7 @@ RUN cmake -Wno-dev -Wno-deprecated -B build -G Ninja \
     cmake --install build
 
 
-FROM alpine:3.16.3
+FROM alpine:3.17.0
 
 ARG QT_VERSION="qt6"
 RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
