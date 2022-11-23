@@ -7,44 +7,16 @@ name: Publish Legacy Release Images
 ########################################################
 
 on:
-  schedule:
-    - cron: "36 6 16 * *"
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
+  workflow_call:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: rmartin16/qbittorrent-nox
 
 jobs:
-
-  setup:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      libtorrent-versions: ${{ steps.set-libtorrent-versions.outputs.libtorrent-versions }}
-      libtorrent-v1-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v1-version }}
-
-    steps:
-      - name: Declare libtorrent Versions
-        id: set-libtorrent-versions
-        run: |
-          LATEST_V1=$( \
-            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
-            cut --delimiter='/' --fields=3 | \
-            grep '^v1\.2' | \
-            head -n1 | \
-            sed 's/v//' \
-          )
-          echo "Latest v1: ${LATEST_V1}"
-          echo "libtorrent-v1-version=${LATEST_V1}" >> ${GITHUB_OUTPUT}
-
   build:
     runs-on: ubuntu-latest
-    needs: setup
     permissions:
       contents: read
       packages: write
@@ -55,19 +27,19 @@ jobs:
         QBITTORRENT_VER: [ "4.1.0","4.1.1","4.1.2","4.1.3","4.1.4","4.1.5","4.1.6","4.1.7","4.1.8","4.1.9","4.1.9.1","4.2.0","4.2.1","4.2.2","4.2.3","4.2.4","4.2.5" ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
         include:
-          - LIBTORRENT_VER: "1_1_14"
+          - LIBTORRENT_TAG: "1_1_14"
           - QBITTORRENT_VER: "4.2.0"
-            LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+            LIBTORRENT_TAG: "v1"
           - QBITTORRENT_VER: "4.2.1"
-            LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+            LIBTORRENT_TAG: "v1"
           - QBITTORRENT_VER: "4.2.2"
-            LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+            LIBTORRENT_TAG: "v1"
           - QBITTORRENT_VER: "4.2.3"
-            LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+            LIBTORRENT_TAG: "v1"
           - QBITTORRENT_VER: "4.2.4"
-            LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+            LIBTORRENT_TAG: "v1"
           - QBITTORRENT_VER: "4.2.5"
-            LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+            LIBTORRENT_TAG: "v1"
 
     steps:
       - name: Checkout repository
@@ -94,7 +66,7 @@ jobs:
           labels: |
             maintainer=${{ github.repository_owner }}
             org.opencontainers.image.title=qbittorrent-nox
-            org.opencontainers.image.description=Headless qBittorrent v${{ matrix.QBITTORRENT_VER }} with libtorrent v${{ matrix.LIBTORRENT_VER }}
+            org.opencontainers.image.description=Headless qBittorrent v${{ matrix.QBITTORRENT_VER }} with libtorrent ${{ matrix.LIBTORRENT_TAG }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
             # v4.2.5 - specific qBittorrent with latest v1 libtorrent
@@ -110,18 +82,18 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@v3
         with:
+          file: qBittorrent.Legacy.Dockerfile
           context: .
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache-filters: release
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          file: Dockerfile-legacy
           build-args: |
-            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+            LIBTORRENT_TAG=${{ matrix.LIBTORRENT_TAG }}
             QBT_VERSION=${{ matrix.QBITTORRENT_VER }}
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
-            CACHEBUST=${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
 
       - name: Set up Python
         if: github.event_name != 'pull_request'

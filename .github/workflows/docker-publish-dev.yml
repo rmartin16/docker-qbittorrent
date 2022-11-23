@@ -9,11 +9,8 @@ name: Publish Dev Images
 on:
   schedule:
     - cron: "36 */12 * * *"
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
+  workflow_call:
 
 env:
   REGISTRY: ghcr.io
@@ -22,41 +19,8 @@ env:
 
 jobs:
 
-  setup:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      libtorrent-versions: ${{ steps.set-libtorrent-versions.outputs.libtorrent-versions }}
-      libtorrent-v1-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v1-version }}
-      libtorrent-v2-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v2-version }}
-
-    steps:
-      - name: Declare libtorrent Versions
-        id: set-libtorrent-versions
-        run: |
-          LATEST_V2=$( \
-            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
-            cut --delimiter='/' --fields=3 | \
-            grep '^v2\.' | \
-            head -n1 | \
-            sed 's/v//' \
-          )
-          echo "Latest v2: ${LATEST_V2}"
-          echo "libtorrent-v2-version=${LATEST_V2}" >> ${GITHUB_OUTPUT}
-
-          LATEST_V1=$( \
-            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
-            cut --delimiter='/' --fields=3 | \
-            grep '^v1\.2' | \
-            head -n1 | \
-            sed 's/v//' \
-          )
-          echo "Latest v1: ${LATEST_V1}"
-          echo "libtorrent-v1-version=${LATEST_V1}" >> ${GITHUB_OUTPUT}
-
   build:
     runs-on: ubuntu-latest
-    needs: setup
     permissions:
       contents: read
       packages: write
@@ -66,29 +30,12 @@ jobs:
       matrix:
         QBITTORRENT_VER: [ "master", "v4_5_x", "v4_4_x", "v4_3_x" ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
-        LIBTORRENT_VER: [ "${{ needs.setup.outputs.libtorrent-v2-version }}", "${{ needs.setup.outputs.libtorrent-v1-version }}" ]
-        include:
-          - BOOST_VERSION: "1_80_0"
+        LIBTORRENT_TAG: [ "v2", "v1" ]
 
     steps:
 
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Cache sources
-        id: cache-sources
-        uses: actions/cache@v3
-        with:
-          path: ./downloads
-          key: sources-${{ env.CACHE_VER }}-${{ matrix.BOOST_VERSION }}
-
-      - name: Download sources
-        if: steps.cache-sources.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ./downloads
-          curl -NLk \
-            "https://boostorg.jfrog.io/artifactory/main/release/$(echo ${{ matrix.BOOST_VERSION }} | sed 's/_/\./g')/source/boost_${{ matrix.BOOST_VERSION }}.tar.gz" \
-            -o "./downloads/boost_${{ matrix.BOOST_VERSION }}.tar.gz"
 
       - name: Determine Qt Version
         id: qt
@@ -117,39 +64,39 @@ jobs:
           labels: |
             maintainer=${{ github.repository_owner }}
             org.opencontainers.image.title=qbittorrent-nox
-            org.opencontainers.image.description=Headless qBittorrent ${{ matrix.QBITTORRENT_VER }} with libtorrent v${{ matrix.LIBTORRENT_VER }}
+            org.opencontainers.image.description=Headless qBittorrent ${{ matrix.QBITTORRENT_VER }} with libtorrent ${{ matrix.LIBTORRENT_TAG }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
             # master - specific qBittorrent with latest v2 libtorrent
-            type=raw,value=${{ matrix.QBITTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_TAG == 'v2' }}
             # master-v2 - specific qBittorrent with latest v2 libtorrent
-            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v2,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v2,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_TAG == 'v2' }}
             # master-debug - specific debug qBittorrent with latest v2 libtorrent
-            type=raw,value=${{ matrix.QBITTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v2' }}
             # master-v2-debug - specific debug qBittorrent with latest v2 libtorrent
-            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v2-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v2-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v2' }}
             # master-v1 - specific qBittorrent with latest v1 libtorrent
-            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v1,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v1-version }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v1,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_TAG == 'v1' }}
             # master-v1-debug - specific debug qBittorrent with latest v1 libtorrent
-            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v1-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v1-version }}
+            type=raw,value=${{ matrix.QBITTORRENT_VER }}-v1-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v1' }}
 
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v3
         with:
+          file: qBittorrent.Dockerfile
           context: .
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache-filters: release
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BOOST_VERSION=${{ matrix.BOOST_VERSION }}
-            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+            LIBTORRENT_TAG=${{ matrix.LIBTORRENT_TAG }}
             QBT_VERSION=${{ matrix.QBITTORRENT_VER }}
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
             QT_VERSION=${{ steps.qt.outputs.version }}
-            CACHEBUST=${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
 
       - name: Set up Python
         if: github.event_name != 'pull_request'

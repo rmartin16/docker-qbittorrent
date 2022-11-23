@@ -45,12 +45,13 @@ qBittorrent dev branches
 ## Build
     docker buildx build \
         --load \
-        --tag qbittorrent-nox:v4.4.5 \
+        --tag qbittorrent-nox:v4.5.0 \
         --build-arg BOOST_VERSION=1_76_0 \
         --build-arg LIBTORRENT_VERSION=v2-latest \
         --build-arg QT_VERSION=qt6 \
-        --build-arg QBT_VERSION=4.4.5 \
+        --build-arg QBT_VERSION=4.5.0 \
         --build-arg QBT_RELEASE_TYPE=debug \
+        --file All.Dockerfile \
         $(pwd)
 
 ## Run
@@ -63,6 +64,6 @@ qBittorrent dev branches
         --env QBT_EULA=accept \
         --volume "$(pwd)/config:/config" \
         --volume "$(pwd)/downloads:/downloads" \
-        qbittorrent-nox:v4.4.5
+        qbittorrent-nox:v4.5.0
 
 <sub>Created primarily to facilitate automated testing for [qbittorrent-api](https://github.com/rmartin16/qbittorrent-api). Zero guarantees. Use at own risk.</sub>
