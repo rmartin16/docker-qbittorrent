@@ -3,7 +3,7 @@
 # Builds qBittorrent v4.3.0+
 #
 ########################################################
-FROM alpine:3.16.3 AS builder
+FROM alpine:3.17.0 AS builder
 
 ENV BASEPATH="/build"
 
@@ -14,7 +14,6 @@ RUN apk --update-cache add \
       curl \
       git \
       icu-dev \
-      libexecinfo-dev \
       libtool \
       linux-headers \
       patch \
@@ -26,6 +25,9 @@ RUN apk --update-cache add \
       re2c \
       tar \
       zlib-dev
+
+# Add back to normal install once libexecinfo-dev is available for v3.17
+RUN apk add libexecinfo-dev --repository=http://dl-cdn.alpinelinux.org/alpine/v3.16/main
 
 ARG QT_VERSION="qt6"
 RUN apk add ${QT_VERSION}-qtbase-dev ${QT_VERSION}-qttools-dev
@@ -107,19 +109,20 @@ RUN cmake -Wno-dev -Wno-deprecated -B build -G Ninja \
       -D QBT_VER_STATUS= \
       -D GUI=OFF \
       -D QT6=ON \
-      -D STACKTRACE=OFF \
+      -D STACKTRACE=ON \
       -D VERBOSE_CONFIGURE=ON && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
 
-FROM alpine:3.16.3
+FROM alpine:3.17.0
 
 ARG QT_VERSION="qt6"
 RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
     adduser -D -H -s /sbin/nologin -u 1000 qbtUser && \
     echo "permit nopass :root" >> "/etc/doas.d/doas.conf"
 
+COPY --from=builder /usr/lib/libexecinfo.so* /usr/lib/
 COPY --from=builder /usr/local/lib/libtorrent-rasterbar* /usr/local/lib/
 COPY --from=builder /usr/local/bin/qbittorrent-nox /usr/bin/qbittorrent-nox
 
