@@ -107,7 +107,7 @@ RUN cmake -Wno-dev -Wno-deprecated -B build -G Ninja \
       -D QBT_VER_STATUS= \
       -D GUI=OFF \
       -D QT6=ON \
-      -D STACKTRACE=OFF \
+      -D STACKTRACE=ON \
       -D VERBOSE_CONFIGURE=ON && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build

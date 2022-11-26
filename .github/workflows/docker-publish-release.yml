@@ -180,9 +180,8 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          # fails too often with github API connection errors
-          #cache-from: type=gha
-          #cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

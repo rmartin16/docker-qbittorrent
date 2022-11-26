@@ -20,7 +20,7 @@ RUN apt update && \
       curl \
       git \
       libssl-dev \
-      libgeoip-dev\
+      libgeoip-dev \
       libtool \
       libboost-dev \
       libboost-system-dev \
