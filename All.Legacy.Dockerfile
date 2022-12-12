@@ -3,7 +3,7 @@
 # Builds qBittorrent v4.1.0 thru v4.2.5
 #
 ########################################################
-FROM ubuntu:22.10 AS qbittorrent-base
+FROM ubuntu:23.04 AS qbittorrent-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
@@ -46,7 +46,7 @@ ARG QBT_BUILD_TYPE="release"
 RUN ${BASE_PATH}/scripts/install_qbittorrent_legacy.sh "${BASE_PATH}" "${QBT_VERSION}" "${QBT_BUILD_TYPE}"
 
 
-FROM ubuntu:22.10 AS release
+FROM ubuntu:23.04 AS release
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
@@ -63,7 +63,7 @@ RUN apt update && \
       --force-badname \
       --no-create-home \
       --shell /usr/sbin/nologin \
-      -u 1000 \
+      -u 1001 \
       qbtuser && \
     echo "permit nopass :root" >> "/etc/doas.conf"
 
