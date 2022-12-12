@@ -3,7 +3,7 @@
 # Builds qBittorrent v4.1.0 thru v4.2.5
 #
 ########################################################
-FROM ubuntu:22.10 AS qbittorrent-base
+FROM ubuntu:22.04 AS qbittorrent-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
@@ -46,7 +46,7 @@ ARG QBT_BUILD_TYPE="release"
 RUN ${BASE_PATH}/scripts/install_qbittorrent_legacy.sh "${BASE_PATH}" "${QBT_VERSION}" "${QBT_BUILD_TYPE}"
 
 
-FROM ubuntu:22.10 AS release
+FROM ubuntu:22.04 AS release
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
