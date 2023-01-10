@@ -15,7 +15,7 @@ ENV BOOST_DIR="${BASE_PATH}/boost"
 RUN ${BASE_PATH}/scripts/install_qbittorrent.sh "${BASE_PATH}" "${QBT_VERSION}" "${QBT_BUILD_TYPE}" "${BOOST_DIR}"
 
 
-FROM alpine:3.17.0 AS release
+FROM alpine:3.17.1 AS release
 
 ARG QT_VERSION="qt6"
 RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
