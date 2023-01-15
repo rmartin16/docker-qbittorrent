@@ -19,7 +19,6 @@ env:
   REGISTRY: ghcr.io
   REGISTRY_USER: rmartin16
   CACHE_VER: "1"
-  BOOST_VERSION: "1_81_0"
 
 jobs:
 
@@ -74,21 +73,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Cache sources
-        id: cache-sources
-        uses: actions/cache@v3
-        with:
-          path: ./downloads
-          key: sources-${{ env.CACHE_VER }}-${{ env.BOOST_VERSION }}
-
-      - name: Download sources
-        if: steps.cache-sources.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ./downloads
-          curl -NLk \
-            "https://boostorg.jfrog.io/artifactory/main/release/$(echo ${{ env.BOOST_VERSION }} | sed 's/_/\./g')/source/boost_${{ env.BOOST_VERSION }}.tar.gz" \
-            -o "./downloads/boost_${{ env.BOOST_VERSION }}.tar.gz"
-
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v2
 
@@ -126,9 +110,15 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            BOOST_VERSION=${{ env.BOOST_VERSION }}
-            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+          build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+          outputs: type=docker,dest=/tmp/base-image.tar
+
+      - name: Upload base image as artifact
+        id: upload-base-image
+        uses: actions/upload-artifact@v2
+        with:
+          name: base-image-libtorrent-${{ matrix.LIBTORRENT_TAG }}
+          path: /tmp/base-image.tar
 
   build-legacy-base:
     runs-on: ubuntu-latest
