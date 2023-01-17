@@ -1,14 +1,18 @@
-name: Publish Base Images
+name: Publish All Images
 
 ########################################################
 #
-# Builds base images to build qBittorrent
+# Builds all qBittorrent images
 #
 ########################################################
 
 on:
   schedule:
-    - cron: "36 2 */3 * *"
+    - cron: "36 6 */7 * *"
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 env:
@@ -73,6 +77,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
@@ -101,11 +106,18 @@ jobs:
         with:
           file: All.Dockerfile
           target: qbittorrent-base
-          push: true
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+          outputs: type=docker,dest=/tmp/base-image.tar
+
+      - name: Upload base image as artifact
+        id: upload-base-image
+        uses: actions/upload-artifact@v2
+        with:
+          name: base-image-libtorrent-${{ matrix.LIBTORRENT_TAG }}
+          path: /tmp/base-image.tar
 
   build-legacy-base:
     runs-on: ubuntu-latest
@@ -130,6 +142,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
@@ -157,8 +170,27 @@ jobs:
         with:
           file: All.Legacy.Dockerfile
           target: qbittorrent-base
-          push: true
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+          outputs: type=docker,dest=/tmp/base-image.tar
+
+      - name: Upload base image as artifact
+        id: upload-base-image
+        uses: actions/upload-artifact@v2
+        with:
+          name: base-image-legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
+          path: /tmp/base-image.tar
+
+  build-qbittorrent-dev:
+    needs: build-base
+    uses: ./.github/workflows/docker-publish-dev.yml
+
+  build-qbittorrent-legacy:
+    needs: build-legacy-base
+    uses: ./.github/workflows/docker-publish-legacy.yml
+
+  build-qbittorrent-release:
+    needs: build-base
+    uses: ./.github/workflows/docker-publish-release.yml
