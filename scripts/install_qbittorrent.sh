@@ -5,26 +5,35 @@ set -e
 BASE_PATH="${1}"
 QBT_VERSION="${2}"
 QBT_BUILD_TYPE="${3}"
-BOOST_DIR="${4}"
+QBT_REPO_URL="${4}"
+QBT_REPO_REF="${5}"
+
+echo "BASE_PATH=${BASE_PATH}"
+echo "QBT_VERSION=${QBT_VERSION}"
+echo "QBT_BUILD_TYPE=${QBT_BUILD_TYPE}"
+echo "QBT_REPO_URL=${QBT_REPO_URL}"
+echo "QBT_REPO_REF=${QBT_REPO_REF}"
+
+if [[ ! -z "${QBT_REPO_URL}" && ! -z "${QBT_REPO_REF}" && ! -z ${QBT_VERSION} ]]; then
+  echo "Only set QBT_REPO_URL and QBT_REPO_REF _or_ QBT_VERSION...not both"
+  exit 1
+fi
+
+if [[ ! -z "${QBT_VERSION}" ]]; then
+  case "${QBT_VERSION}" in
+    # check known dev branches
+    master | v4_5_x | v4_4_x | v4_3_x)
+      QBT_REPO_REF="${QBT_VERSION}" ;;
+    # otherwise assume the version is a release
+    *)
+      QBT_REPO_REF="release-${QBT_VERSION}" ;;
+  esac
+fi
 
 cd "${BASE_PATH}"
-
-case "${QBT_VERSION}" in
-  master)
-    QBT_DIR="qBittorrent-${QBT_VERSION}"
-    QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ;;
-  v4_5_x | v4_4_x | v4_3_x)
-    QBT_DIR="qBittorrent-${QBT_VERSION:1}"
-    QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/heads/${QBT_VERSION}.tar.gz" ;;
-  *)
-    QBT_DIR="qBittorrent-release-${QBT_VERSION}"
-    QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz" ;;
-esac
-
-curl -sNLk "${QBT_URL}" | tar -zxf - -C "${BASE_PATH}"
-mv "${QBT_DIR}" "${BASE_PATH}/qBittorrent"
-
+git clone "${QBT_REPO_URL}"
 cd "${BASE_PATH}/qBittorrent"
+git checkout "${QBT_REPO_REF}"
 
 # https://github.com/qbittorrent/qBittorrent/issues/13981#issuecomment-746836281
 if [[ "${QBT_VERSION}" = "4.3.0" || "${QBT_VERSION}" = "4.3.0.1" || "${QBT_VERSION}" = "4.3.1" ]] ; then
@@ -34,8 +43,6 @@ fi
 cmake -Wno-dev -Wno-deprecated -B build -G Ninja \
   -D CMAKE_BUILD_TYPE="${QBT_BUILD_TYPE}" \
   -D CMAKE_CXX_STANDARD=17 \
-  -D BOOST_INCLUDEDIR="${BOOST_DIR}" \
-  -D Boost_NO_BOOST_CMAKE=TRUE \
   -D CMAKE_CXX_STANDARD_LIBRARIES="/usr/lib/libexecinfo.so" \
   -D CMAKE_INSTALL_PREFIX="/usr/local" \
   -D QBT_VER_STATUS= \

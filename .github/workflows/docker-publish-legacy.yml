@@ -1,4 +1,4 @@
-name: Publish Legacy Release Images
+name: Publish Legacy Images
 
 ########################################################
 #
@@ -47,6 +47,23 @@ jobs:
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v2
+        with:
+          driver: docker
+
+      - name: Download artifact
+        id: download-artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v3
+        with:
+          name: base-image-legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          if [ -f "/tmp/base-image.tar" ]; then
+            docker load --input /tmp/base-image.tar
+            docker image ls -a
+          fi
 
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
@@ -84,9 +101,6 @@ jobs:
         with:
           file: qBittorrent.Legacy.Dockerfile
           context: .
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          no-cache-filters: release
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -102,8 +116,8 @@ jobs:
           python-version: '3.x'
 
       - name: Verify image
-        if: github.event_name != 'pull_request'
         id: verify
+        if: github.event_name != 'pull_request'
         run: |
           DOCKER_TAG=v${{ matrix.QBITTORRENT_VER }}-v1
           if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi

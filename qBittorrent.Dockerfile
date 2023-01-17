@@ -8,11 +8,17 @@ FROM ghcr.io/rmartin16/qbittorrent-base:libtorrent-${LIBTORRENT_TAG} AS qbittorr
 
 ENV BASE_PATH="/build"
 
-ARG QBT_VERSION
-ARG QBT_BUILD_TYPE
-ENV BOOST_DIR="${BASE_PATH}/boost"
+ARG QBT_REPO_URL="https://github.com/qbittorrent/qBittorrent"
+ARG QBT_REPO_REF=""
+ARG QBT_VERSION=""
+ARG QBT_BUILD_TYPE="release"
 
-RUN ${BASE_PATH}/scripts/install_qbittorrent.sh "${BASE_PATH}" "${QBT_VERSION}" "${QBT_BUILD_TYPE}" "${BOOST_DIR}"
+RUN ${BASE_PATH}/scripts/install_qbittorrent.sh \
+      "${BASE_PATH}" \
+      "${QBT_VERSION}" \
+      "${QBT_BUILD_TYPE}" \
+      "${QBT_REPO_URL}" \
+      "${QBT_REPO_REF}"
 
 
 FROM alpine:3.17.1 AS release

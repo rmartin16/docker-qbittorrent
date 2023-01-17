@@ -1,8 +1,8 @@
-name: Publish Base Images
+name: Publish All Images
 
 ########################################################
 #
-# Builds base images to build qBittorrent
+# Builds all qBittorrent images
 #
 ########################################################
 
@@ -19,7 +19,6 @@ env:
   REGISTRY: ghcr.io
   REGISTRY_USER: rmartin16
   CACHE_VER: "1"
-  BOOST_VERSION: "1_81_0"
 
 jobs:
 
@@ -74,21 +73,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Cache sources
-        id: cache-sources
-        uses: actions/cache@v3
-        with:
-          path: ./downloads
-          key: sources-${{ env.CACHE_VER }}-${{ env.BOOST_VERSION }}
-
-      - name: Download sources
-        if: steps.cache-sources.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ./downloads
-          curl -NLk \
-            "https://boostorg.jfrog.io/artifactory/main/release/$(echo ${{ env.BOOST_VERSION }} | sed 's/_/\./g')/source/boost_${{ env.BOOST_VERSION }}.tar.gz" \
-            -o "./downloads/boost_${{ env.BOOST_VERSION }}.tar.gz"
-
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v2
 
@@ -123,12 +107,26 @@ jobs:
           file: All.Dockerfile
           target: qbittorrent-base
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            BOOST_VERSION=${{ env.BOOST_VERSION }}
-            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+          build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+
+      - name: Save image to file
+        id: save-image
+        run: docker save -o /tmp/base-image.tar ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
+
+      - name: Upload base image as artifact
+        id: upload-base-image
+        uses: actions/upload-artifact@v3
+        with:
+          name: base-image-libtorrent-${{ matrix.LIBTORRENT_TAG }}
+          path: /tmp/base-image.tar
+
+      - name: Publish to ghcr.io
+        id: publish
+        if: github.event_name != 'pull_request'
+        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
 
   build-legacy-base:
     runs-on: ubuntu-latest
@@ -182,10 +180,26 @@ jobs:
           file: All.Legacy.Dockerfile
           target: qbittorrent-base
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
+
+      - name: Save image to file
+        id: save-image
+        run: docker save -o /tmp/base-image.tar ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
+
+      - name: Upload image as artifact
+        id: upload-base-image
+        uses: actions/upload-artifact@v3
+        with:
+          name: base-image-legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
+          path: /tmp/base-image.tar
+
+      - name: Publish image to ghcr.io
+        id: publish
+        if: github.event_name != 'pull_request'
+        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
 
   build-qbittorrent-dev:
     needs: build-base

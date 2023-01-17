@@ -43,14 +43,56 @@ qBittorrent dev branches
     [ same for v4_5_x, v4_4_x, and v4_3_x ]
 
 ## Build
+
+### Build Arguments
+
+- `LIBTORRENT_VERSION`
+  - Use `v1-latest` or `v2-latest` for the latest respective `libtorrent` version. 
+  - Or use a specific release name, e.g. `2.0.8` or `1.2.18`.
+- `QBT_VERSION`
+  - Version of qBittorrent to build, e.g. `4.5.0` or a dev branch like `v4_5_x` or `master`.
+  - Alternatively, specify an arbitrary qBittorrent repo and ref.
+- `QBT_REPO_URL`
+  - Repo to use via `git clone`, e.g. `https://github.com/qbittorrent/qBittorrent`.
+- `QBT_REPO_REF`
+  - Repo reference to use via `git checkout` such as branch or tag name.
+- `QBT_BUILD_TYPE`
+  - Build type `release` or `debug`.
+
+From an official qBittorrent release:
+
     docker buildx build \
         --load \
         --tag qbittorrent-nox:v4.5.0 \
-        --build-arg BOOST_VERSION=1_76_0 \
         --build-arg LIBTORRENT_VERSION=v2-latest \
         --build-arg QT_VERSION=qt6 \
+        --build-arg QBT_BUILD_TYPE=debug \
         --build-arg QBT_VERSION=4.5.0 \
-        --build-arg QBT_RELEASE_TYPE=debug \
+        --file All.Dockerfile \
+        $(pwd)
+
+From an official qBittorrent dev branch:
+
+    docker buildx build \
+        --load \
+        --tag qbittorrent-nox:v4.5.0 \
+        --build-arg LIBTORRENT_VERSION=v2-latest \
+        --build-arg QT_VERSION=qt6 \
+        --build-arg QBT_BUILD_TYPE=debug \
+        --build-arg QBT_VERSION=v4_5_x \
+        --file All.Dockerfile \
+        $(pwd)
+
+From an arbitrary repo:
+    
+    docker buildx build \
+        --load \
+        --tag qbittorrent-nox:v4.5.0 \
+        --build-arg LIBTORRENT_VERSION=v2-latest \
+        --build-arg QT_VERSION=qt6 \
+        --build-arg QBT_BUILD_TYPE=debug \
+        --build-arg QBT_REPO_URL=https://github.com/user/repo \
+        --build-arg QBT_REPO_URL=branch-name
         --file All.Dockerfile \
         $(pwd)
 
