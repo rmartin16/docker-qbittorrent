@@ -86,7 +86,7 @@ jobs:
 
       - name: Download artifact
         id: download-artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: base-image-libtorrent-${{ matrix.LIBTORRENT_TAG }}
           path: /tmp
