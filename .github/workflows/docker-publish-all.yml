@@ -18,7 +18,6 @@ on:
 env:
   REGISTRY: ghcr.io
   REGISTRY_USER: rmartin16
-  CACHE_VER: "1"
 
 jobs:
 
@@ -100,8 +99,7 @@ jobs:
             type=raw,value=libtorrent-${{ matrix.LIBTORRENT_TAG }}
             type=raw,value=latest,enable=${{ matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
 
-      - name: Build and push Docker image
-        id: build-and-push
+      - name: Build image
         uses: docker/build-push-action@v3
         with:
           file: All.Dockerfile
@@ -113,18 +111,15 @@ jobs:
           build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
 
       - name: Save image to file
-        id: save-image
         run: docker save -o /tmp/base-image.tar ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
 
-      - name: Upload base image as artifact
-        id: upload-base-image
+      - name: Upload image as artifact
         uses: actions/upload-artifact@v3
         with:
           name: base-image-libtorrent-${{ matrix.LIBTORRENT_TAG }}
           path: /tmp/base-image.tar
 
-      - name: Publish to ghcr.io
-        id: publish
+      - name: Publish image to ghcr.io
         if: github.event_name != 'pull_request'
         run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
 
@@ -173,8 +168,7 @@ jobs:
           tags: |
             type=raw,value=legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
 
-      - name: Build and push Docker image
-        id: build-and-push
+      - name: Build image
         uses: docker/build-push-action@v3
         with:
           file: All.Legacy.Dockerfile
@@ -186,18 +180,15 @@ jobs:
           build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
 
       - name: Save image to file
-        id: save-image
         run: docker save -o /tmp/base-image.tar ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
 
       - name: Upload image as artifact
-        id: upload-base-image
         uses: actions/upload-artifact@v3
         with:
           name: base-image-legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
           path: /tmp/base-image.tar
 
       - name: Publish image to ghcr.io
-        id: publish
         if: github.event_name != 'pull_request'
         run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
 

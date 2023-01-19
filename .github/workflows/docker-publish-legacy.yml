@@ -50,15 +50,14 @@ jobs:
         with:
           driver: docker
 
-      - name: Download artifact
-        id: download-artifact
+      - name: Download base image artifact
         continue-on-error: true
         uses: actions/download-artifact@v3
         with:
           name: base-image-legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
           path: /tmp
 
-      - name: Load Docker image
+      - name: Load base image
         run: |
           if [ -f "/tmp/base-image.tar" ]; then
             docker load --input /tmp/base-image.tar
@@ -95,13 +94,12 @@ jobs:
             # v4.2.5-v1-debug - specific debug qBittorrent with specific libtorrent version
             type=raw,value=v${{ matrix.QBITTORRENT_VER }}-v1-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
-      - name: Build and push Docker image
-        id: build-and-push
+      - name: Build image
         uses: docker/build-push-action@v3
         with:
           file: qBittorrent.Legacy.Dockerfile
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -110,18 +108,19 @@ jobs:
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
 
       - name: Set up Python
-        if: github.event_name != 'pull_request'
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
       - name: Verify image
-        id: verify
-        if: github.event_name != 'pull_request'
         run: |
           DOCKER_TAG=v${{ matrix.QBITTORRENT_VER }}-v1
           if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
           docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}
           python -m pip install qbittorrent-api
           docker logs qbt
-          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); assert client.app.version=="v${{ matrix.QBITTORRENT_VER }}"'
+
+      - name: Publish image to ghcr.io
+        if: github.event_name != 'pull_request'
+        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}

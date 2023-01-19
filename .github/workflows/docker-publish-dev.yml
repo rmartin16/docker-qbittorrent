@@ -15,7 +15,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: rmartin16/qbittorrent-nox
-  CACHE_VER: "1"
 
 jobs:
 
@@ -48,14 +47,14 @@ jobs:
         with:
           driver: docker
 
-      - name: Download artifact
+      - name: Download base image artifact
         uses: actions/download-artifact@v3
         continue-on-error: true
         with:
           name: base-image-libtorrent-${{ matrix.LIBTORRENT_TAG }}
           path: /tmp
 
-      - name: Load Docker image
+      - name: Load base image
         run: |
           if [ -f "/tmp/base-image.tar" ]; then
             docker load --input /tmp/base-image.tar
@@ -96,13 +95,12 @@ jobs:
             # master-v1-debug - specific debug qBittorrent with latest v1 libtorrent
             type=raw,value=${{ matrix.QBITTORRENT_VER }}-v1-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v1' }}
 
-      - name: Build and push Docker image
-        id: build-and-push
+      - name: Build image
         uses: docker/build-push-action@v3
         with:
           file: qBittorrent.Dockerfile
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -112,14 +110,11 @@ jobs:
             QT_VERSION=${{ steps.qt.outputs.version }}
 
       - name: Set up Python
-        if: github.event_name != 'pull_request'
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
       - name: Verify image
-        id: verify
-        if: github.event_name != 'pull_request'
         run: |
           DOCKER_TAG=${{ matrix.QBITTORRENT_VER }}-${{ matrix.LIBTORRENT_TAG }}
           if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
@@ -127,3 +122,7 @@ jobs:
           python -m pip install qbittorrent-api
           docker logs qbt
           python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
+
+      - name: Publish image to ghcr.io
+        if: github.event_name != 'pull_request'
+        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
