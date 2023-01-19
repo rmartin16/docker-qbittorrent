@@ -21,40 +21,12 @@ env:
 
 jobs:
 
-  setup:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      libtorrent-v1-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v1-version }}
-      libtorrent-v2-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v2-version }}
-
-    steps:
-      - name: Declare libtorrent Versions
-        id: set-libtorrent-versions
-        run: |
-          LATEST_V2=$( \
-            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
-            cut --delimiter='/' --fields=3 | \
-            grep '^v2\.' | \
-            head -n1 | \
-            sed 's/v//' \
-          )
-          echo "Latest v2: ${LATEST_V2}"
-          echo "libtorrent-v2-version=${LATEST_V2}" >> ${GITHUB_OUTPUT}
-
-          LATEST_V1=$( \
-            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
-            cut --delimiter='/' --fields=3 | \
-            grep '^v1\.2' | \
-            head -n1 | \
-            sed 's/v//' \
-          )
-          echo "Latest v1: ${LATEST_V1}"
-          echo "libtorrent-v1-version=${LATEST_V1}" >> ${GITHUB_OUTPUT}
+  libtorrent-versions:
+    uses: ./.github/workflows/libtorrent-latest-versions.yml
 
   build-base:
     runs-on: ubuntu-latest
-    needs: setup
+    needs: libtorrent-versions
     permissions:
       contents: read
       packages: write
@@ -63,9 +35,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v2-version }}
+          - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}
             LIBTORRENT_TAG: v2
-          - LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+          - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
             LIBTORRENT_TAG: v1
 
     steps:
@@ -88,16 +60,15 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
-          flavor: |
-            latest=false
+          flavor: latest=false
           labels: |
             maintainer=${{ github.repository_owner }}
-            org.opencontainers.image.title=qbittorrent v4.3.0 libtorrent ${{ matrix.LIBTORRENT_TAG }} builder
-            org.opencontainers.image.description=Base to build qBittorrent 4.3.0+ using libtorrent ${{ matrix.LIBTORRENT_TAG }}
+            org.opencontainers.image.title=qbittorrent v4.3.0 libtorrent ${{ matrix.LIBTORRENT_VERSION }} builder
+            org.opencontainers.image.description=Base to build qBittorrent 4.3.0+ using libtorrent ${{ matrix.LIBTORRENT_VERSION }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
             type=raw,value=libtorrent-${{ matrix.LIBTORRENT_TAG }}
-            type=raw,value=latest,enable=${{ matrix.LIBTORRENT_VER == needs.setup.outputs.libtorrent-v2-version }}
+            type=raw,value=latest,enable=${{ matrix.LIBTORRENT_TAG == 'v2' }}
 
       - name: Build image
         uses: docker/build-push-action@v3
@@ -105,27 +76,16 @@ jobs:
           file: All.Dockerfile
           target: qbittorrent-base
           context: .
-          load: true
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha,scope=${{ matrix.LIBTORRENT_TAG }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.LIBTORRENT_TAG }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
-
-      - name: Save image to file
-        run: docker save -o /tmp/base-image.tar ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
-
-      - name: Upload image as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: base-image-libtorrent-${{ matrix.LIBTORRENT_TAG }}
-          path: /tmp/base-image.tar
-
-      - name: Publish image to ghcr.io
-        if: github.event_name != 'pull_request'
-        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
+          build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
 
   build-legacy-base:
     runs-on: ubuntu-latest
-    needs: setup
+    needs: libtorrent-versions
     permissions:
       contents: read
       packages: write
@@ -134,9 +94,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - LIBTORRENT_VER: 1_1_14
+          - LIBTORRENT_VERSION: 1_1_14
             LIBTORRENT_TAG: 1_1_14
-          - LIBTORRENT_VER: ${{ needs.setup.outputs.libtorrent-v1-version }}
+          - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
             LIBTORRENT_TAG: v1
     steps:
       - name: Checkout repository
@@ -158,12 +118,11 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
-          flavor: |
-            latest=false
+          flavor: latest=false
           labels: |
             maintainer=${{ github.repository_owner }}
-            org.opencontainers.image.title=qbittorrent v4.3.0 libtorrent v1 builder
-            org.opencontainers.image.description=Base to build qBittorrent 4.3.0+ using libtorrent ${{ matrix.LIBTORRENT_TAG }}
+            org.opencontainers.image.title=qbittorrent v4.3.0 libtorrent ${{ matrix.LIBTORRENT_VERSION }} builder
+            org.opencontainers.image.description=Base to build qBittorrent 4.3.0+ using libtorrent ${{ matrix.LIBTORRENT_VERSION }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
             type=raw,value=legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
@@ -174,32 +133,21 @@ jobs:
           file: All.Legacy.Dockerfile
           target: qbittorrent-base
           context: .
-          load: true
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha,scope=${{ matrix.LIBTORRENT_TAG }}-legacy
+          cache-to: type=gha,mode=max,scope=${{ matrix.LIBTORRENT_TAG }}-legacy
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VER }}
-
-      - name: Save image to file
-        run: docker save -o /tmp/base-image.tar ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
-
-      - name: Upload image as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: base-image-legacy-libtorrent-${{ matrix.LIBTORRENT_TAG }}
-          path: /tmp/base-image.tar
-
-      - name: Publish image to ghcr.io
-        if: github.event_name != 'pull_request'
-        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/qbittorrent-base
+          build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
 
   build-qbittorrent-dev:
     needs: build-base
     uses: ./.github/workflows/docker-publish-dev.yml
 
-  build-qbittorrent-legacy:
-    needs: build-legacy-base
-    uses: ./.github/workflows/docker-publish-legacy.yml
-
   build-qbittorrent-release:
     needs: build-base
     uses: ./.github/workflows/docker-publish-release.yml
+
+  build-qbittorrent-legacy:
+    needs: build-legacy-base
+    uses: ./.github/workflows/docker-publish-legacy.yml

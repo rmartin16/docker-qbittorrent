@@ -1,6 +1,6 @@
 ########################################################
 #
-# Builds qBittorrent v4.3.0+ from base image
+# Builds qBittorrent v4.3.0+ using existing base image
 #
 ########################################################
 ARG LIBTORRENT_TAG="v2"
