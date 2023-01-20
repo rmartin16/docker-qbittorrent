@@ -34,6 +34,7 @@ jobs:
       matrix:
         QBITTORRENT_VERSION: [ "master", "v4_5_x", "v4_4_x", "v4_3_x" ]
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
+        LIBTORRENT_VERSION: [ "${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}", "${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}" ]
         include:
           - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
             LIBTORRENT_TAG: "v1"
@@ -113,7 +114,7 @@ jobs:
           docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${REGISTRY_USER}/${IMAGE_NAME}:${DOCKER_TAG}
           python -m pip install qbittorrent-api
           docker logs qbt
-          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}")'
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.build_info.libtorrent=="${{ matrix.LIBTORRENT_VERSION }}.0"'
 
       - name: Publish image to ghcr.io
         if: github.event_name != 'pull_request'
