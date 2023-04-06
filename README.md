@@ -92,7 +92,7 @@ From an arbitrary repo:
         --build-arg QT_VERSION=qt6 \
         --build-arg QBT_BUILD_TYPE=debug \
         --build-arg QBT_REPO_URL=https://github.com/user/repo \
-        --build-arg QBT_REPO_REF=branch-name
+        --build-arg QBT_REPO_REF=branch-name \
         --file All.Dockerfile \
         $(pwd)
 
