@@ -10,6 +10,8 @@ git clone --shallow-submodules --recurse-submodules https://github.com/ninja-bui
 cd "${BASE_PATH}/ninja"
 git checkout "$(git tag -l --sort=-v:refname "v*" | head -n 1)"
 
+git rev-parse HEAD > /build_commit.ninja
+
 cmake -Wno-dev -B build \
   -D CMAKE_CXX_COMPILER=/usr/bin/g++ \
   -D CMAKE_C_COMPILER=/usr/bin/gcc \

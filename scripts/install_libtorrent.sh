@@ -17,6 +17,8 @@ else
   git checkout v"${LIBTORRENT_VERSION}"
 fi
 
+git rev-parse HEAD > /build_commit.libtorrent
+
 cmake -Wno-dev -G Ninja -B build \
   -D CMAKE_BUILD_TYPE="Release" \
   -D CMAKE_CXX_STANDARD=17 \

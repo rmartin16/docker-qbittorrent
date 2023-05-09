@@ -157,10 +157,11 @@ jobs:
         run: |
           DOCKER_TAG=v${{ matrix.QBITTORRENT_VERSION }}-${{ matrix.LIBTORRENT_TAG }}
           if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
-          docker run --rm -d --name qbt -p8080:8080 ${REGISTRY}/${REGISTRY_USER}/${IMAGE_NAME}:${DOCKER_TAG}
+          docker run -d --name qbt -p8080:8080 ${REGISTRY}/${REGISTRY_USER}/${IMAGE_NAME}:${DOCKER_TAG}
           python -m pip install qbittorrent-api
           docker logs qbt
           python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.version=="v${{ matrix.QBITTORRENT_VERSION }}"; assert client.app.build_info.libtorrent=="${{ matrix.LIBTORRENT_VERSION }}.0"'
+          docker exec qbt /bin/sh -c "tail -n+1 /build_commit.*"
 
       - name: Publish image to ghcr.io
         if: github.event_name != 'pull_request'

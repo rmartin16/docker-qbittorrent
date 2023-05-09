@@ -35,6 +35,8 @@ git clone "${QBT_REPO_URL}"
 cd "${BASE_PATH}/qBittorrent"
 git checkout "${QBT_REPO_REF}"
 
+git rev-parse HEAD > /build_commit.qBittorrent
+
 # https://github.com/qbittorrent/qBittorrent/issues/13981#issuecomment-746836281
 if [[ "${QBT_VERSION}" = "4.3.0" || "${QBT_VERSION}" = "4.3.0.1" || "${QBT_VERSION}" = "4.3.1" ]] ; then
   patch "src/base/bittorrent/session.cpp" "${BASE_PATH}/patches/libtorrent_2_compat_early_4.3.0.patch"

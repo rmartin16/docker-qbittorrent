@@ -14,6 +14,8 @@ mv "qBittorrent-release-${QBT_VERSION}" "qBittorrent"
 
 cd "${BASE_PATH}/qBittorrent"
 
+echo "${QBT_VERSION}" > /build_commit.qBittorrent
+
 # https://github.com/qbittorrent/qBittorrent/issues/9333
 if [ "${QBT_VERSION}" = "4.1.2" ] ; then
   patch "src/base/preferences.cpp" "${BASE_PATH}/patches/implicit_cast_4.1.2.patch"

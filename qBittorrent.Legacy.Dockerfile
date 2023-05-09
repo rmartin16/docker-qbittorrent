@@ -37,6 +37,7 @@ RUN apt update && \
 
 COPY --from=qbittorrent-build /usr/local/lib/libtorrent-rasterbar* /usr/local/lib/
 COPY --from=qbittorrent-build /usr/local/bin/qbittorrent-nox /usr/bin/qbittorrent-nox
+COPY --from=qbittorrent-build /build_commit.* /
 
 COPY assets/entrypoint.sh /entrypoint.sh
 

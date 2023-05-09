@@ -29,7 +29,7 @@ RUN apk --update-cache add \
       tar \
       zlib-dev && \
     # Add back to normal install once libexecinfo-dev is available for v3.17
-    apk add libexecinfo-dev --repository=http://dl-cdn.alpinelinux.org/alpine/v3.16/main
+    apk add libexecinfo-dev --repository=https://dl-cdn.alpinelinux.org/alpine/v3.16/main
 
 ENV BASE_PATH="/build"
 
@@ -67,6 +67,7 @@ RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
 COPY --from=qbittorrent-build /usr/lib/libexecinfo.so* /usr/lib/
 COPY --from=qbittorrent-build /usr/local/lib/libtorrent-rasterbar* /usr/local/lib/
 COPY --from=qbittorrent-build /usr/local/bin/qbittorrent-nox /usr/bin/qbittorrent-nox
+COPY --from=qbittorrent-build /build_commit.* /
 
 COPY assets/entrypoint.sh /entrypoint.sh
 

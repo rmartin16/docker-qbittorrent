@@ -31,6 +31,7 @@ RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
 COPY --from=qbittorrent-build /usr/lib/libexecinfo.so* /usr/lib/
 COPY --from=qbittorrent-build /usr/local/lib/libtorrent-rasterbar* /usr/local/lib/
 COPY --from=qbittorrent-build /usr/local/bin/qbittorrent-nox /usr/bin/qbittorrent-nox
+COPY --from=qbittorrent-build /build_commit.* /
 
 COPY assets/entrypoint.sh /entrypoint.sh
 
