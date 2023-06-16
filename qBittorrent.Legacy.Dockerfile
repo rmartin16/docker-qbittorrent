@@ -14,7 +14,7 @@ ARG QBT_BUILD_TYPE="release"
 RUN ${BASE_PATH}/scripts/install_qbittorrent_legacy.sh "${BASE_PATH}" "${QBT_VERSION}" "${QBT_BUILD_TYPE}"
 
 
-FROM ubuntu:22.04 AS release
+FROM ubuntu:23.10 AS release
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
