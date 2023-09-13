@@ -93,7 +93,7 @@ jobs:
             type=raw,value=v${{ matrix.QBITTORRENT_VERSION }}-v1-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
       - name: Build image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           file: All.Legacy.Dockerfile
           target: release
