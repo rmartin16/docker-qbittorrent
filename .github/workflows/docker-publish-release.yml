@@ -41,7 +41,7 @@ jobs:
 
           FINAL_VERSION_VERS=$( \
             git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/qbittorrent/qBittorrent.git | \
-            grep -vE 'beta|rc' | \
+            grep -vE 'alpha|beta|rc' | \
             cut --delimiter='/' --fields=3 | \
             grep -v "\^{}" | \
             cut --delimiter='-' --fields=2 | \
