@@ -22,7 +22,7 @@ fi
 if [[ ! -z "${QBT_VERSION}" ]]; then
   case "${QBT_VERSION}" in
     # check known dev branches
-    master | v4_5_x | v4_4_x | v4_3_x)
+    master | v[456789]_[01233456789]_x)
       QBT_REPO_REF="${QBT_VERSION}" ;;
     # otherwise assume the version is a release
     *)
