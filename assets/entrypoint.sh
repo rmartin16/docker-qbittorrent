@@ -13,6 +13,8 @@ Session\Port=6881
 Session\TempPath=${DOWNLOADS_PATH}/temp
 [LegalNotice]
 Accepted=false
+[Preferences]
+WebUI\Password_PBKDF2="@ByteArray(KxJHXeKVeexHvT3/dH53lQ==:5YNA6Bq61AoRLNsFYLBj+bMcUN+L47UbTXauk9eZed3oxlk54uKrRVxg5NQiW+6LrYMZCU/JzWyVlFxs0o7SbQ==)"
 EOF
 
     if [ "$QBT_EULA" = "accept" ]; then
