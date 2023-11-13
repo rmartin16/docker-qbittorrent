@@ -5,10 +5,13 @@ set -e
 BASE_PATH="${1}"
 LIBTORRENT_VERSION="${2}"
 
-cd "${BASE_PATH}"
-git clone --shallow-submodules --recurse-submodules https://github.com/arvidn/libtorrent.git "libtorrent"
+LIBTORRENT_DIR="libtorrent"
+LIBTORRENT_REPO_URL="https://github.com/arvidn/libtorrent.git"
 
-cd "${BASE_PATH}/libtorrent"
+cd "${BASE_PATH}"
+git clone --shallow-submodules --recurse-submodules ${LIBTORRENT_REPO_URL} ${LIBTORRENT_DIR}
+
+cd "${BASE_PATH}/${LIBTORRENT_DIR}"
 if [ "${LIBTORRENT_VERSION}" = "v2-latest" ]; then
   git checkout "$(git tag -l --sort=-v:refname "v2*" | head -n 1)"
 elif [ "${LIBTORRENT_VERSION}" = "v1-latest" ]; then
