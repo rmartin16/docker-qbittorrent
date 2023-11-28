@@ -1,0 +1,168 @@
+name: Publish Latest Release Image
+
+########################################################
+#
+# Builds qBittorrent v4.3.0+
+#
+########################################################
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_USER: rmartin16
+  IMAGE_NAME: qbittorrent-nox
+
+jobs:
+
+  libtorrent-versions:
+    uses: ./.github/workflows/libtorrent-latest-versions.yml
+
+  qbittorrent-versions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      qbittorrent-versions: ${{ steps.set-qbittorrent-versions.outputs.qbittorrent-versions }}
+      qbittorrent-latest-version: ${{ steps.set-qbittorrent-versions.outputs.qbittorrent-latest-version }}
+
+    steps:
+      - name: Declare qBittorrent Versions
+        id: set-qbittorrent-versions
+        run: |  # find all releases >= v4.3.0
+          ALL_VERS=$( \
+            git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/qbittorrent/qBittorrent.git | \
+            cut --delimiter='/' --fields=3 | \
+            grep -v "\^{}" | \
+            cut --delimiter='-' --fields=2 | \
+            grep '^4\.[3-9]\.\d*.' \
+          )
+
+          FINAL_VERSION_VERS=$( \
+            git -c 'versionsort.suffix=-' ls-remote --tags --sort='v:refname' https://github.com/qbittorrent/qBittorrent.git | \
+            grep -vE 'alpha|beta|rc' | \
+            cut --delimiter='/' --fields=3 | \
+            grep -v "\^{}" | \
+            cut --delimiter='-' --fields=2 | \
+            grep '^4\.[3-9]\.\d*.' \
+          )
+
+          LATEST_VER=$(echo ${FINAL_VERSION_VERS} | rev | cut -d' ' -f1 | rev)
+          echo "Latest: ${LATEST_VER}"
+          echo "qbittorrent-latest-version=${LATEST_VER}" >> ${GITHUB_OUTPUT}
+
+          VERS_MATRIX_LIST=$(echo ${ALL_VERS} | sed -z 's/ /","/g;s/,$/\n/')
+          VERS_MATRIX_LIST="[\"${VERS_MATRIX_LIST}\"]"
+          echo ${VERS_MATRIX_LIST}
+          echo "qbittorrent-versions=${VERS_MATRIX_LIST}" >> ${GITHUB_OUTPUT}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [ qbittorrent-versions, libtorrent-versions ]
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        QBITTORRENT_VERSION: [ "${{ needs.qbittorrent-versions.outputs.qbittorrent-latest-version }}" ]
+        QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
+        LIBTORRENT_VERSION: [ "${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}", "${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}" ]
+        include:
+          - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
+            LIBTORRENT_TAG: "v1"
+          - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}
+            LIBTORRENT_TAG: "v2"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine Qt Version
+        id: qt
+        run: |
+          echo "version=qt6" >> ${GITHUB_OUTPUT}
+          if [[ ${{ matrix.QBITTORRENT_VERSION }} = 4.3* ]]; then
+            echo "version=qt5" >> ${GITHUB_OUTPUT};
+          fi
+          if [[ ${{ matrix.QBITTORRENT_VERSION }} = 4.4.0beta* ]]; then
+            echo "version=qt5" >> ${GITHUB_OUTPUT};
+          fi
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}
+          flavor: latest=false
+          labels: |
+            maintainer=${{ github.repository_owner }}
+            org.opencontainers.image.title=qbittorrent-nox
+            org.opencontainers.image.description=Headless qBittorrent v${{ matrix.QBITTORRENT_VERSION }} using libtorrent v${{ matrix.LIBTORRENT_VERSION }}
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+          tags: |
+            # latest - latest qBittorrent with latest v2 libtorrent
+            type=raw,value=latest,enable=${{ matrix.QBITTORRENT_VERSION == needs.qbittorrent-versions.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_TAG == 'v2' }}
+            # latest-v1/2 - latest qBittorrent with latest v1/2 libtorrent
+            type=raw,value=latest-${{ matrix.LIBTORRENT_TAG }},enable=${{ matrix.QBITTORRENT_VERSION == needs.qbittorrent-versions.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
+            # latest-debug - latest debug qBittorrent with latest v2 libtorrent
+            type=raw,value=latest-debug,enable=${{ matrix.QBITTORRENT_VERSION == needs.qbittorrent-versions.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v2' }}
+            # latest-v1/2-debug - latest debug qBittorrent with latest v1/2 libtorrent
+            type=raw,value=latest-${{ matrix.LIBTORRENT_TAG }}-debug,enable=${{ matrix.QBITTORRENT_VERSION == needs.qbittorrent-versions.outputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
+            # v4.4.4 - specific qBittorrent with latest v2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VERSION }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_TAG == 'v2' }}
+            # v4.4.4-v1/2 - specific qBittorrent with latest v1/2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VERSION }}-${{ matrix.LIBTORRENT_TAG }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
+            # v4.4.4-debug - specific debug qBittorrent with latest v2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VERSION }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v2' }}
+            # v4.4.4-v1/2-debug - specific debug qBittorrent with latest v1/2 libtorrent
+            type=raw,value=v${{ matrix.QBITTORRENT_VERSION }}-${{ matrix.LIBTORRENT_TAG }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          file: All.Dockerfile
+          target: release
+          context: .
+          load: true
+          cache-from: type=gha,scope=${{ matrix.LIBTORRENT_TAG }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LIBTORRENT_TAG=${{ matrix.LIBTORRENT_TAG }}
+            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
+            QBT_VERSION=${{ matrix.QBITTORRENT_VERSION }}
+            QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
+            QT_VERSION=${{ steps.qt.outputs.version }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Verify image
+        run: |
+          DOCKER_TAG=v${{ matrix.QBITTORRENT_VERSION }}-${{ matrix.LIBTORRENT_TAG }}
+          if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
+          docker run -d --name qbt -p8080:8080 ${REGISTRY}/${REGISTRY_USER}/${IMAGE_NAME}:${DOCKER_TAG}
+          python -m pip install qbittorrent-api
+          docker logs qbt
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.version.lower()=="v${{ matrix.QBITTORRENT_VERSION }}"; assert client.app.build_info.libtorrent=="${{ matrix.LIBTORRENT_VERSION }}.0"'
+          docker exec qbt /bin/sh -c "tail -n+1 /build_commit.*"
+
+      - name: Publish image to ghcr.io
+        if: github.event_name != 'pull_request'
+        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}
