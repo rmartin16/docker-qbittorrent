@@ -36,7 +36,7 @@ jobs:
             cut --delimiter='/' --fields=3 | \
             grep -v "\^{}" | \
             cut --delimiter='-' --fields=2 | \
-            grep '^4\.[3-9]\.\d*.' \
+            grep -E '^4\.[3-9]\.\d*.|^[5-9]\.\d*.\.\d*.' \ 
           )
 
           FINAL_VERSION_VERS=$( \
@@ -45,7 +45,7 @@ jobs:
             cut --delimiter='/' --fields=3 | \
             grep -v "\^{}" | \
             cut --delimiter='-' --fields=2 | \
-            grep '^4\.[3-9]\.\d*.' \
+            grep -E '^4\.[3-9]\.\d*.|^[5-9]\.\d*.\.\d*.' \
           )
 
           LATEST_VER=$(echo ${FINAL_VERSION_VERS} | rev | cut -d' ' -f1 | rev)
