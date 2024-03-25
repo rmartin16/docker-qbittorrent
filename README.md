@@ -47,7 +47,7 @@ qBittorrent dev branches
 ### Build Arguments
 
 - `LIBTORRENT_VERSION`
-  - Use `v1-latest` or `v2-latest` for the latest respective `libtorrent` version. 
+  - Use `v1-latest` or `v2-latest` for the latest respective `libtorrent` version.
   - Or use a specific release name, e.g. `2.0.8` or `1.2.18`.
 - `QBT_VERSION`
   - Version of qBittorrent to build, e.g. `4.5.0` or a dev branch like `v4_5_x` or `master`.
@@ -84,7 +84,7 @@ From an official qBittorrent dev branch:
         $(pwd)
 
 From an arbitrary repo:
-    
+
     docker buildx build \
         --load \
         --tag qbittorrent-nox:v4.5.0 \

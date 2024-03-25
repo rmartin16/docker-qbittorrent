@@ -7,6 +7,6 @@ index b66073c55..56b3b6a2d 100644
  {
      Q_ASSERT(article);
 -    Q_ASSERT(!m_articles.contains(article->guid()));
- 
+
      // Insertion sort
      const int maxArticles = m_session->maxArticlesPerFeed();

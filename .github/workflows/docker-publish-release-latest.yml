@@ -36,7 +36,7 @@ jobs:
             cut --delimiter='/' --fields=3 | \
             grep -v "\^{}" | \
             cut --delimiter='-' --fields=2 | \
-            grep -E '^4\.[3-9]\.\d*.|^[5-9]\.\d*.\.\d*.' \ 
+            grep -E '^4\.[3-9]\.\d*.|^[5-9]\.\d*.\.\d*.' \
           )
 
           FINAL_VERSION_VERS=$( \
