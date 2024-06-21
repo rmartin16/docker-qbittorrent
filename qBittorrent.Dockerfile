@@ -21,7 +21,7 @@ RUN ${BASE_PATH}/scripts/install_qbittorrent.sh \
       "${QBT_REPO_REF}"
 
 
-FROM alpine:3.20.0 AS release
+FROM alpine:3.20.1 AS release
 
 ARG QT_VERSION="qt6"
 RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
