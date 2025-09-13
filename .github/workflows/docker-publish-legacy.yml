@@ -118,7 +118,7 @@ jobs:
           DOCKER_TAG=v${{ matrix.QBITTORRENT_VERSION }}-v1
           if [[ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
           docker run -d --name qbt -p8080:8080 ${REGISTRY}/${REGISTRY_USER}/${IMAGE_NAME}:${DOCKER_TAG}
-          python -m pip install qbittorrent-api
+          python -m pip install git+https://github.com/rmartin16/qbittorrent-api
           docker logs qbt
           python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); assert client.app.version=="v${{ matrix.QBITTORRENT_VERSION }}"'
           docker exec qbt /bin/sh -c "tail -n+1 /build_commit.*"
