@@ -23,6 +23,7 @@ RUN apk --update-cache add \
       qt5-qtbase-dev \
       qt5-qttools-dev \
       qt6-qtbase-dev \
+      qt6-qtbase-private-dev \
       qt6-qttools-dev \
       openssl-dev \
       re2c \
