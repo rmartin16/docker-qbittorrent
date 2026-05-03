@@ -27,6 +27,7 @@ jobs:
             git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
             cut --delimiter='/' --fields=3 | \
             grep '^v2\.' | \
+            grep -v 'rc' | \
             head -n1 | \
             sed 's/v//' \
           )
