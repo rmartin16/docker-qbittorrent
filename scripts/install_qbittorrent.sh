@@ -53,9 +53,14 @@ fi
 # Stacktrace support is only built into debug images. It uses Boost.Stacktrace's
 # addr2line backend (which needs `addr2line` from binutils at runtime) so we avoid
 # the execinfo/libexecinfo dependency that musl does not provide.
+#
+# qBittorrent only adopted Boost.Stacktrace in 4.5.0. Earlier versions implement
+# stacktraces via `src/app/stacktrace.h`, which includes execinfo.h directly and
+# fails to compile without it. Since libexecinfo is no longer installed (musl lacks
+# execinfo.h), leave stacktrace disabled for those versions.
 STACKTRACE=OFF
 STACKTRACE_CXX_FLAGS=""
-if [ "${QBT_BUILD_TYPE}" = "debug" ]; then
+if [ "${QBT_BUILD_TYPE}" = "debug" ] && ! grep -q "execinfo.h" src/app/stacktrace.h 2>/dev/null; then
   STACKTRACE=ON
   STACKTRACE_CXX_FLAGS="-DBOOST_STACKTRACE_USE_ADDR2LINE"
 fi
