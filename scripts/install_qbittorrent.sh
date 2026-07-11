@@ -70,6 +70,7 @@ cmake -Wno-dev -Wno-deprecated -B build -G Ninja \
   -D CMAKE_CXX_STANDARD=17 \
   -D CMAKE_CXX_FLAGS="${STACKTRACE_CXX_FLAGS}" \
   -D CMAKE_INSTALL_PREFIX="/usr/local" \
+  -D QT_FIND_PRIVATE_MODULES=ON \
   -D QBT_VER_STATUS= \
   -D GUI=OFF \
   -D WEBUI=ON \
