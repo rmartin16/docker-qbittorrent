@@ -50,16 +50,26 @@ if [ "${PATCH_VER_STATUS:-0}" = 1 ]; then
   sed -i 's/QBT_VERSION_STATUS ""/QBT_VERSION_STATUS "dev"/' src/base/version.h.in
 fi
 
+# Stacktrace support is only built into debug images. It uses Boost.Stacktrace's
+# addr2line backend (which needs `addr2line` from binutils at runtime) so we avoid
+# the execinfo/libexecinfo dependency that musl does not provide.
+STACKTRACE=OFF
+STACKTRACE_CXX_FLAGS=""
+if [ "${QBT_BUILD_TYPE}" = "debug" ]; then
+  STACKTRACE=ON
+  STACKTRACE_CXX_FLAGS="-DBOOST_STACKTRACE_USE_ADDR2LINE"
+fi
+
 cmake -Wno-dev -Wno-deprecated -B build -G Ninja \
   -D CMAKE_BUILD_TYPE="${QBT_BUILD_TYPE}" \
   -D CMAKE_CXX_STANDARD=17 \
-  -D CMAKE_CXX_STANDARD_LIBRARIES="/usr/lib/libexecinfo.so" \
+  -D CMAKE_CXX_FLAGS="${STACKTRACE_CXX_FLAGS}" \
   -D CMAKE_INSTALL_PREFIX="/usr/local" \
   -D QBT_VER_STATUS= \
   -D GUI=OFF \
   -D WEBUI=ON \
   -D QT6=ON \
-  -D STACKTRACE=ON \
+  -D STACKTRACE="${STACKTRACE}" \
   -D DBUS=ON \
   -D SYSTEMD=OFF \
   -D VERBOSE_CONFIGURE=ON \
