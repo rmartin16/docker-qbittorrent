@@ -123,6 +123,22 @@ jobs:
           python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); assert client.app.version=="v${{ matrix.QBITTORRENT_VERSION }}"'
           docker exec qbt /bin/sh -c "tail -n+1 /build_commit.*"
 
+      # push via buildx (cache hit off the verify build) so SLSA provenance and
+      # SBOM attestations are attached -- these can't ride on `docker push`
       - name: Publish image to ghcr.io
         if: github.event_name != 'pull_request'
-        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}
+        uses: docker/build-push-action@v7
+        with:
+          file: All.Legacy.Dockerfile
+          target: release
+          context: .
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.LIBTORRENT_TAG }}-legacy
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
+            QBT_VERSION=${{ matrix.QBITTORRENT_VERSION }}
+            QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}

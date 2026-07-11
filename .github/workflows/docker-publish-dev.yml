@@ -135,6 +135,23 @@ jobs:
           python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.build_info.libtorrent=="${{ steps.lt.outputs.version }}.0"'
           docker exec qbt /bin/sh -c "tail -n+1 /build_commit.*"
 
+      # push via buildx (cache hit off the verify build) so SLSA provenance and
+      # SBOM attestations are attached -- these can't ride on `docker push`
       - name: Publish image to ghcr.io
         if: github.event_name != 'pull_request'
-        run: docker push --all-tags ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}
+        uses: docker/build-push-action@v7
+        with:
+          file: All.Dockerfile
+          target: release
+          context: .
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=${{ steps.lt.outputs.scope }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LIBTORRENT_VERSION=${{ steps.lt.outputs.version }}
+            QBT_VERSION=${{ matrix.QBITTORRENT_VERSION }}
+            QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
+            QT_VERSION=${{ steps.qt.outputs.version }}

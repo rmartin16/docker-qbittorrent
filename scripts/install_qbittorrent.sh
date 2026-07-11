@@ -16,12 +16,12 @@ echo "QBT_REPO_REF=${QBT_REPO_REF}"
 
 QBT_REPO_DIR="qBittorrent"
 
-if [[ ! -z "${QBT_REPO_URL}" && ! -z "${QBT_REPO_REF}" && ! -z ${QBT_VERSION} ]]; then
+if [ -n "${QBT_REPO_URL}" ] && [ -n "${QBT_REPO_REF}" ] && [ -n "${QBT_VERSION}" ]; then
   echo "Only set QBT_REPO_URL and QBT_REPO_REF _or_ QBT_VERSION...not both"
   exit 1
 fi
 
-if [[ ! -z "${QBT_VERSION}" ]]; then
+if [ -n "${QBT_VERSION}" ]; then
   case "${QBT_VERSION}" in
     # check known dev branches
     master | v[456789]_[0123456789]_x)
@@ -41,11 +41,11 @@ git checkout "${QBT_REPO_REF}"
 git rev-parse HEAD > /build_commit.qBittorrent
 
 # https://github.com/qbittorrent/qBittorrent/issues/13981#issuecomment-746836281
-if [[ "${QBT_VERSION}" = "4.3.0" || "${QBT_VERSION}" = "4.3.0.1" || "${QBT_VERSION}" = "4.3.1" ]] ; then
+if [ "${QBT_VERSION}" = "4.3.0" ] || [ "${QBT_VERSION}" = "4.3.0.1" ] || [ "${QBT_VERSION}" = "4.3.1" ]; then
   patch "src/base/bittorrent/session.cpp" "${BASE_PATH}/patches/libtorrent_2_compat_early_4.3.0.patch"
 fi
 
-if [ $PATCH_VER_STATUS = 1 ]; then
+if [ "${PATCH_VER_STATUS:-0}" = 1 ]; then
   echo "Setting QBT_VERSION_STATUS to dev"
   sed -i 's/QBT_VERSION_STATUS ""/QBT_VERSION_STATUS "dev"/' src/base/version.h.in
 fi

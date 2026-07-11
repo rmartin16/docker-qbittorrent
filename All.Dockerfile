@@ -26,6 +26,7 @@ RUN apk --update-cache add \
       qt6-qttools-dev \
       openssl-dev \
       re2c \
+      samurai \
       tar \
       zlib-dev && \
     # Add back to normal install once libexecinfo-dev is available for v3.17
@@ -35,8 +36,6 @@ ENV BASE_PATH="/build"
 
 COPY patches/* ${BASE_PATH}/patches/
 COPY scripts/* ${BASE_PATH}/scripts/
-
-RUN ${BASE_PATH}/scripts/install_ninja.sh "${BASE_PATH}"
 
 ARG LIBTORRENT_VERSION
 ARG QBT_BUILD_TYPE="release"
