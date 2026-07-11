@@ -90,18 +90,22 @@ jobs:
         id: lt
         run: |
           # qBittorrent 5.3.0+ builds against libtorrent 2.1; older releases
-          # stay on the stable 2.0 line.
+          # stay on the stable 2.0 line. The cache scope tracks the libtorrent
+          # line so 2.1 hits its own base cache.
+          SCOPE="${{ matrix.LIBTORRENT_TAG }}"
           if [[ "${{ matrix.LIBTORRENT_TAG }}" = "v1" ]]; then
             LT_VERSION="${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}"
           else
             LT_VERSION="${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}"
             case "${{ matrix.QBITTORRENT_VERSION }}" in
               5.3.* | 5.[4-9].* | 5.[1-9][0-9].* | [6-9].*)
-                LT_VERSION="${{ needs.libtorrent-versions.outputs.libtorrent-v2_1-version }}" ;;
+                LT_VERSION="${{ needs.libtorrent-versions.outputs.libtorrent-v2_1-version }}"
+                SCOPE="v2_1" ;;
             esac
           fi
-          echo "Using libtorrent ${LT_VERSION}"
+          echo "Using libtorrent ${LT_VERSION} (cache scope ${SCOPE})"
           echo "version=${LT_VERSION}" >> ${GITHUB_OUTPUT}
+          echo "scope=${SCOPE}" >> ${GITHUB_OUTPUT}
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
@@ -150,7 +154,7 @@ jobs:
           target: release
           context: .
           load: true
-          cache-from: type=gha,scope=${{ matrix.LIBTORRENT_TAG }}
+          cache-from: type=gha,scope=${{ steps.lt.outputs.scope }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
