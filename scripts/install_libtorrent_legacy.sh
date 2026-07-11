@@ -4,6 +4,8 @@ set -e
 
 BASE_PATH="${1}"
 LIBTORRENT_VERSION="${2}"
+# must match the qBittorrent build type to avoid an assert/NDEBUG ABI mismatch
+BUILD_TYPE="${3:-Release}"
 
 cd "${BASE_PATH}"
 
@@ -21,8 +23,8 @@ git clone --shallow-submodules --recurse-submodules https://github.com/arvidn/li
 cd "${BASE_PATH}/libtorrent/src/libtorrent"
 git rev-parse HEAD > /build_commit.libtorrent
 
-cmake -Wno-dev -B cmake-build-dir/Release \
-  -D CMAKE_BUILD_TYPE=Release \
+cmake -Wno-dev -B cmake-build-dir \
+  -D CMAKE_BUILD_TYPE="${BUILD_TYPE}" \
   -D CMAKE_INSTALL_PREFIX="/usr/local"
-cmake --build cmake-build-dir/Release --parallel "$(nproc)"
-cmake --install cmake-build-dir/Release
+cmake --build cmake-build-dir --parallel "$(nproc)"
+cmake --install cmake-build-dir

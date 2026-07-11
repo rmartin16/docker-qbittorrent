@@ -25,9 +25,12 @@ if [ "${QBT_VERSION}" = "4.1.6" ] ; then
   patch "src/base/rss/rss_feed.cpp" "${BASE_PATH}/patches/rss_assert_4.1.6.patch"
 fi
 
+ENABLE_DEBUG=""
 if [ "${QBT_BUILD_TYPE}" = "debug" ]; then
   ENABLE_DEBUG="--enable-debug"
 fi
+# ENABLE_DEBUG must expand to zero args when empty, so it is intentionally unquoted
+# shellcheck disable=SC2086
 ./configure \
   CXXFLAGS="-std=c++14" \
   CFLAGS="-I/usr/local/include/libtorrent" \

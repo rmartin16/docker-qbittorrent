@@ -24,11 +24,14 @@ RUN ${BASE_PATH}/scripts/install_qbittorrent.sh \
 FROM alpine:3.21.5 AS release
 
 ARG QT_VERSION="qt6"
+ARG QBT_BUILD_TYPE="release"
 RUN apk --no-cache add doas python3 tini ${QT_VERSION}-qtbase && \
+    # debug images bundle binutils so Boost.Stacktrace's addr2line backend can
+    # symbolize crashes; release images have stacktrace disabled and don't need it
+    if [ "${QBT_BUILD_TYPE}" = "debug" ]; then apk --no-cache add binutils; fi && \
     adduser -D -H -s /sbin/nologin -u 1000 qbtuser && \
     echo "permit nopass :root" >> "/etc/doas.d/doas.conf"
 
-COPY --from=qbittorrent-build /usr/lib/libexecinfo.so* /usr/lib/
 COPY --from=qbittorrent-build /usr/local/lib/libtorrent-rasterbar* /usr/local/lib/
 COPY --from=qbittorrent-build /usr/local/bin/qbittorrent-nox /usr/bin/qbittorrent-nox
 COPY --from=qbittorrent-build /build_commit.* /
