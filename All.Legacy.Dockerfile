@@ -34,8 +34,9 @@ COPY patches/* ${BASE_PATH}/patches/
 COPY scripts/* ${BASE_PATH}/scripts/
 
 ARG LIBTORRENT_VERSION
+ARG QBT_BUILD_TYPE="release"
 
-RUN ${BASE_PATH}/scripts/install_libtorrent_legacy.sh "${BASE_PATH}" "${LIBTORRENT_VERSION}"
+RUN ${BASE_PATH}/scripts/install_libtorrent_legacy.sh "${BASE_PATH}" "${LIBTORRENT_VERSION}" "${QBT_BUILD_TYPE}"
 
 
 FROM qbittorrent-base AS qbittorrent-build

@@ -54,6 +54,21 @@ jobs:
             echo "version=qt5" >> ${GITHUB_OUTPUT};
           fi
 
+      - name: Resolve libtorrent version
+        id: lt
+        run: |
+          # master and every future qBittorrent branch >= v5_3_x build against
+          # libtorrent 2.1; older branches stay on the stable 2.0 line.
+          LT_VERSION="${{ matrix.LIBTORRENT_VERSION }}"
+          if [[ "${{ matrix.LIBTORRENT_TAG }}" = "v2" ]]; then
+            case "${{ matrix.QBITTORRENT_VERSION }}" in
+              master | v5_3_x | v5_[4-9]_x | v[6-9]_*)
+                LT_VERSION="${{ needs.libtorrent-versions.outputs.libtorrent-v2_1-version }}" ;;
+            esac
+          fi
+          echo "Using libtorrent ${LT_VERSION}"
+          echo "version=${LT_VERSION}" >> ${GITHUB_OUTPUT}
+
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@v4
 
@@ -74,7 +89,7 @@ jobs:
           labels: |
             maintainer=${{ github.repository_owner }}
             org.opencontainers.image.title=qbittorrent-nox
-            org.opencontainers.image.description=Headless qBittorrent ${{ matrix.QBITTORRENT_VERSION }} using libtorrent ${{ matrix.LIBTORRENT_VERSION }}
+            org.opencontainers.image.description=Headless qBittorrent ${{ matrix.QBITTORRENT_VERSION }} using libtorrent ${{ steps.lt.outputs.version }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
             # master - specific qBittorrent with latest v2 libtorrent
@@ -97,7 +112,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
+            LIBTORRENT_VERSION=${{ steps.lt.outputs.version }}
             QBT_VERSION=${{ matrix.QBITTORRENT_VERSION }}
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
             QT_VERSION=${{ steps.qt.outputs.version }}
@@ -114,7 +129,7 @@ jobs:
           docker run -d --name qbt -p8080:8080 ${REGISTRY}/${REGISTRY_USER}/${IMAGE_NAME}:${DOCKER_TAG}
           python -m pip install git+https://github.com/rmartin16/qbittorrent-api
           docker logs qbt
-          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.build_info.libtorrent=="${{ matrix.LIBTORRENT_VERSION }}.0"'
+          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.build_info.libtorrent=="${{ steps.lt.outputs.version }}.0"'
           docker exec qbt /bin/sh -c "tail -n+1 /build_commit.*"
 
       - name: Publish image to ghcr.io

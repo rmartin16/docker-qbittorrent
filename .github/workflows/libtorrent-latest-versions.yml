@@ -4,11 +4,14 @@ on:
   workflow_call:
     outputs:
       libtorrent-v1-version:
-        description: "Most recent version of libtorrent v1"
+        description: "Most recent version of libtorrent v1.2"
         value: ${{ jobs.libtorrent-versions.outputs.libtorrent-v1-version }}
       libtorrent-v2-version:
-        description: "Most recent version of libtorrent v2"
+        description: "Most recent version of libtorrent v2.0 (stable v2 line)"
         value: ${{ jobs.libtorrent-versions.outputs.libtorrent-v2-version }}
+      libtorrent-v2_1-version:
+        description: "Most recent version of libtorrent v2.1 (qBittorrent 5.3+ only)"
+        value: ${{ jobs.libtorrent-versions.outputs.libtorrent-v2_1-version }}
 
 jobs:
 
@@ -18,21 +21,36 @@ jobs:
     outputs:
       libtorrent-v1-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v1-version }}
       libtorrent-v2-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v2-version }}
+      libtorrent-v2_1-version: ${{ steps.set-libtorrent-versions.outputs.libtorrent-v2_1-version }}
 
     steps:
       - name: Declare libtorrent Versions
         id: set-libtorrent-versions
         run: |
+          # Stable v2 line: pinned to 2.0.x. Do NOT track 2.1 here -- qBittorrent
+          # only supports libtorrent 2.1 from 5.3.0 onward, so 2.1 has its own
+          # output that is applied selectively per qBittorrent version.
           LATEST_V2=$( \
             git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
             cut --delimiter='/' --fields=3 | \
-            grep '^v2\.' | \
+            grep '^v2\.0' | \
             grep -v 'rc' | \
             head -n1 | \
             sed 's/v//' \
           )
-          echo "Latest v2: ${LATEST_V2}"
+          echo "Latest v2.0: ${LATEST_V2}"
           echo "libtorrent-v2-version=${LATEST_V2}" >> ${GITHUB_OUTPUT}
+
+          LATEST_V2_1=$( \
+            git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \
+            cut --delimiter='/' --fields=3 | \
+            grep '^v2\.1' | \
+            grep -v 'rc' | \
+            head -n1 | \
+            sed 's/v//' \
+          )
+          echo "Latest v2.1: ${LATEST_V2_1}"
+          echo "libtorrent-v2_1-version=${LATEST_V2_1}" >> ${GITHUB_OUTPUT}
 
           LATEST_V1=$( \
             git -c 'versionsort.suffix=-' ls-remote --tags --sort='-v:refname' https://github.com/arvidn/libtorrent.git | \

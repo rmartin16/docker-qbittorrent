@@ -39,8 +39,9 @@ COPY scripts/* ${BASE_PATH}/scripts/
 RUN ${BASE_PATH}/scripts/install_ninja.sh "${BASE_PATH}"
 
 ARG LIBTORRENT_VERSION
+ARG QBT_BUILD_TYPE="release"
 
-RUN ${BASE_PATH}/scripts/install_libtorrent.sh "${BASE_PATH}" "${LIBTORRENT_VERSION}"
+RUN ${BASE_PATH}/scripts/install_libtorrent.sh "${BASE_PATH}" "${LIBTORRENT_VERSION}" "${QBT_BUILD_TYPE}"
 
 
 FROM qbittorrent-base AS qbittorrent-build
