@@ -27,6 +27,18 @@ fi
 
 git rev-parse HEAD > /build_commit.libtorrent
 
+# libtorrent enables its own internal invariant assertions in Debug builds via a
+# PUBLIC `$<$<CONFIG:Debug>:TORRENT_USE_ASSERTS>` in its CMakeLists. These are
+# libtorrent-development checks that abort the process on internal invariants
+# (e.g. libtorrent 2.1's disk_cache), which is not what our debug images are for --
+# there we want qBittorrent's own Q_ASSERT + stacktrace, not libtorrent's. Because
+# the definition is PUBLIC it also propagates to qBittorrent (a Debug consumer),
+# so we must strip it here rather than override the build type: removing it leaves
+# the macro undefined, which libtorrent's config.hpp defaults to 0 for both the
+# library and its consumers, keeping TORRENT_USE_ASSERTS (and thus the struct ABI)
+# consistent. Release builds are unaffected (the generator expression is inactive).
+sed -i '/\$<\$<CONFIG:Debug>:TORRENT_USE_ASSERTS>/d' CMakeLists.txt
+
 # qBittorrent 5.3+ requires libtorrent 2.1 to be built with deprecated functions
 # disabled; see https://github.com/qbittorrent/qBittorrent/issues/24663
 case "${LIBTORRENT_VERSION}" in
