@@ -21,7 +21,7 @@ RUN ${BASE_PATH}/scripts/install_qbittorrent.sh \
       "${QBT_REPO_REF}"
 
 
-FROM alpine:3.21.5 AS release
+FROM alpine:3.24.1 AS release
 
 ARG QT_VERSION="qt6"
 ARG QBT_BUILD_TYPE="release"
