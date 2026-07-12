@@ -55,7 +55,7 @@ fi
 # (Alpine 3.24+) no longer pulls these in, leaving them as incomplete types and
 # breaking the build. Upstream added the explicit includes in 5.0; backport them
 # when missing so the older maintenance branches (v4_4_x/v4_5_x/v4_6_x) still build.
-if ! grep -q '#include <QHash>' src/base/http/types.h; then
+if [ -f src/base/http/types.h ] && ! grep -q '#include <QHash>' src/base/http/types.h; then
   echo "Adding missing container includes to src/base/http/types.h"
   sed -i 's|#include <QHostAddress>|#include <QByteArray>\n#include <QHash>\n#include <QHostAddress>\n#include <QMap>|' src/base/http/types.h
 fi
