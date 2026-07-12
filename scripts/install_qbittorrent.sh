@@ -60,6 +60,16 @@ if [ -f src/base/http/types.h ] && ! grep -q '#include <QHash>' src/base/http/ty
   sed -i 's|#include <QHostAddress>|#include <QByteArray>\n#include <QHash>\n#include <QHostAddress>\n#include <QMap>|' src/base/http/types.h
 fi
 
+# qBittorrent asserts that every libtorrent-reported tracker still exists in its own
+# tracker list, but the two legitimately diverge when trackers are removed/replaced
+# with an announce-status update in flight. This aborts debug builds (Q_ASSERT) even
+# though the following lines already handle the missing entry gracefully. Drop the
+# over-strict assert. The member is named `m_trackerEntries` before 5.0 and
+# `m_trackerEntryStatuses` from 5.0 onward. See qbittorrent/qBittorrent PR.
+if [ -f src/base/bittorrent/torrentimpl.cpp ]; then
+  sed -i '/Q_ASSERT(it != m_trackerEntr[A-Za-z]*\.end())/d' src/base/bittorrent/torrentimpl.cpp
+fi
+
 # Stacktrace support is only built into debug images. It uses Boost.Stacktrace's
 # addr2line backend (which needs `addr2line` from binutils at runtime) so we avoid
 # the execinfo/libexecinfo dependency that musl does not provide.
