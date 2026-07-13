@@ -9,3 +9,12 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    ignore:
+      # The legacy images build ancient libtorrent (1.1.x/1.2.x) that only
+      # compiles against the Boost/GCC in Ubuntu 24.04 LTS; newer Ubuntu
+      # releases removed Boost.Asio APIs these versions depend on. Pin to
+      # 24.04 and only accept patch-level updates.
+      - dependency-name: "ubuntu"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"

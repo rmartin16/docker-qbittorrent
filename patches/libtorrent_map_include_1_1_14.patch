@@ -1,0 +1,18 @@
+--- a/include/libtorrent/rss.hpp
++++ b/include/libtorrent/rss.hpp
+@@ -39,5 +39,6 @@
+ #include <boost/enable_shared_from_this.hpp>
+ #include <string>
++#include <map>
+
+ #ifndef TORRENT_NO_DEPRECATE
+ namespace libtorrent
+--- a/include/libtorrent/torrent_info.hpp
++++ b/include/libtorrent/torrent_info.hpp
+@@ -51,5 +51,6 @@
+ #include "libtorrent/socket.hpp"
+ #include "libtorrent/sha1_hash.hpp"
+ #include "libtorrent/file_storage.hpp"
++#include <map>
+
+ namespace libtorrent
