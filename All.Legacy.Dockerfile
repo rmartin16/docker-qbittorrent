@@ -3,7 +3,7 @@
 # Builds qBittorrent v4.1.0 thru v4.2.5
 #
 ########################################################
-FROM ubuntu:22.04 AS qbittorrent-base
+FROM ubuntu:24.04 AS qbittorrent-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
@@ -47,15 +47,18 @@ ARG QBT_BUILD_TYPE="release"
 RUN ${BASE_PATH}/scripts/install_qbittorrent_legacy.sh "${BASE_PATH}" "${QBT_VERSION}" "${QBT_BUILD_TYPE}"
 
 
-FROM ubuntu:22.04 AS release
+FROM ubuntu:24.04 AS release
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
     apt install --no-install-recommends -y \
+      adduser \
       doas \
       python3 \
       qtbase5-dev \
       tini && \
+    { deluser ubuntu 2>/dev/null || true; } && \
+    { delgroup ubuntu 2>/dev/null || true; } && \
     addgroup qbtuser --force-badname && \
     adduser \
       --quiet \

@@ -23,6 +23,12 @@ git clone --shallow-submodules --recurse-submodules https://github.com/arvidn/li
 cd "${BASE_PATH}/libtorrent/src/libtorrent"
 git rev-parse HEAD > /build_commit.libtorrent
 
+# libtorrent 1.1.14's headers rely on transitive <map> includes that newer
+# libstdc++ (Ubuntu 24.04+) no longer provides, so add the include explicitly
+if [ "${LIBTORRENT_VERSION}" = "1_1_14" ]; then
+  patch -p1 < "${BASE_PATH}/patches/libtorrent_map_include_1_1_14.patch"
+fi
+
 cmake -Wno-dev -B cmake-build-dir \
   -D CMAKE_BUILD_TYPE="${BUILD_TYPE}" \
   -D CMAKE_INSTALL_PREFIX="/usr/local"
