@@ -3,7 +3,7 @@
 # Builds qBittorrent v4.3.0+
 #
 ########################################################
-FROM alpine:3.24.1 AS qbittorrent-base
+FROM alpine:3.24.2 AS qbittorrent-base
 
 RUN apk --update-cache add \
       automake \
@@ -56,7 +56,7 @@ RUN ${BASE_PATH}/scripts/install_qbittorrent.sh \
       "${QBT_REPO_URL}" \
       "${QBT_REPO_REF}"
 
-FROM alpine:3.24.1 AS release
+FROM alpine:3.24.2 AS release
 
 ARG QT_VERSION="qt6"
 ARG QBT_BUILD_TYPE="release"
