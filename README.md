@@ -19,27 +19,21 @@ Open qBittorrent WebUI at http://localhost:8080
 Latest qBittorrent Release
 
     docker pull ghcr.io/rmartin16/qbittorrent-nox:latest     # latest libtorrent v2.x.x
-    docker pull ghcr.io/rmartin16/qbittorrent-nox:latest-v1  # latest libtorrent v1.x.x
 
 Arbitrary qBittorrent Release
 
     docker pull ghcr.io/rmartin16/qbittorrent-nox:v4.x.x     # latest libtorrent v2.x.x
-    docker pull ghcr.io/rmartin16/qbittorrent-nox:v4.x.x-v1  # latest libtorrent v1.x.x
 
 Arbitrary Debug qBittorrent Release
 
     docker pull ghcr.io/rmartin16/qbittorrent-nox:latest-debug     # latest libtorrent v2.x.x
-    docker pull ghcr.io/rmartin16/qbittorrent-nox:latest-v1-debug  # latest libtorrent v1.x.x
     docker pull ghcr.io/rmartin16/qbittorrent-nox:v4.x.x-debug     # latest libtorrent v2.x.x
-    docker pull ghcr.io/rmartin16/qbittorrent-nox:v4.x.x-v1-debug  # latest libtorrent v1.x.x
 
 qBittorrent dev branches
 
     docker pull ghcr.io/rmartin16/qbittorrent-nox:master
     docker pull ghcr.io/rmartin16/qbittorrent-nox:master-v2
     docker pull ghcr.io/rmartin16/qbittorrent-nox:master-v2-debug
-    docker pull ghcr.io/rmartin16/qbittorrent-nox:master-v1
-    docker pull ghcr.io/rmartin16/qbittorrent-nox:master-v1-debug
     [ same for v4_5_x, v4_4_x, and v4_3_x ]
 
 ## Build

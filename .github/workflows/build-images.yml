@@ -25,9 +25,6 @@ on:
         required: false
         default: ""
         type: string
-      libtorrent-v1-version:
-        required: true
-        type: string
       libtorrent-v2-version:
         required: true
         type: string
@@ -52,7 +49,7 @@ jobs:
       matrix:
         QBITTORRENT_VERSION: ${{ fromJson(inputs.qbittorrent-versions) }}
         QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
-        LIBTORRENT_TAG: [ "v1", "v2" ]
+        LIBTORRENT_TAG: [ "v2" ]
 
     steps:
       - name: Checkout repository
@@ -82,16 +79,12 @@ jobs:
           # 2.1; everything else stays on the stable 2.0 line. The cache scope tracks
           # the libtorrent line so 2.1 hits its own base cache.
           SCOPE="${{ matrix.LIBTORRENT_TAG }}"
-          if [ "${{ matrix.LIBTORRENT_TAG }}" = "v1" ]; then
-            LT_VERSION="${{ inputs.libtorrent-v1-version }}"
-          else
-            LT_VERSION="${{ inputs.libtorrent-v2-version }}"
-            case "${{ matrix.QBITTORRENT_VERSION }}" in
-              master | v5_3_x | v5_[4-9]_x | v[6-9]_* | 5.3.* | 5.[4-9].* | 5.[1-9][0-9].* | [6-9].*)
-                LT_VERSION="${{ inputs.libtorrent-v2_1-version }}"
-                SCOPE="v2_1" ;;
-            esac
-          fi
+          LT_VERSION="${{ inputs.libtorrent-v2-version }}"
+          case "${{ matrix.QBITTORRENT_VERSION }}" in
+            master | v5_3_x | v5_[4-9]_x | v[6-9]_* | 5.3.* | 5.[4-9].* | 5.[1-9][0-9].* | [6-9].*)
+              LT_VERSION="${{ inputs.libtorrent-v2_1-version }}"
+              SCOPE="v2_1" ;;
+          esac
           echo "Using libtorrent ${LT_VERSION} (cache scope ${SCOPE})"
           echo "version=${LT_VERSION}" >> ${GITHUB_OUTPUT}
           echo "scope=${SCOPE}" >> ${GITHUB_OUTPUT}
@@ -121,19 +114,19 @@ jobs:
           tags: |
             # latest - only the designated latest version, with latest v2 libtorrent
             type=raw,value=latest,enable=${{ inputs.qbittorrent-latest-version != '' && matrix.QBITTORRENT_VERSION == inputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_TAG == 'v2' }}
-            # latest-v1/2 - latest qBittorrent with latest v1/2 libtorrent
+            # latest-v2 - latest qBittorrent with latest v2 libtorrent
             type=raw,value=latest-${{ matrix.LIBTORRENT_TAG }},enable=${{ inputs.qbittorrent-latest-version != '' && matrix.QBITTORRENT_VERSION == inputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
             # latest-debug - latest debug qBittorrent with latest v2 libtorrent
             type=raw,value=latest-debug,enable=${{ inputs.qbittorrent-latest-version != '' && matrix.QBITTORRENT_VERSION == inputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v2' }}
-            # latest-v1/2-debug - latest debug qBittorrent with latest v1/2 libtorrent
+            # latest-v2-debug - latest debug qBittorrent with latest v2 libtorrent
             type=raw,value=latest-${{ matrix.LIBTORRENT_TAG }}-debug,enable=${{ inputs.qbittorrent-latest-version != '' && matrix.QBITTORRENT_VERSION == inputs.qbittorrent-latest-version && matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
             # <version> - specific qBittorrent with latest v2 libtorrent
             type=raw,value=${{ steps.ver.outputs.tag }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' && matrix.LIBTORRENT_TAG == 'v2' }}
-            # <version>-v1/2 - specific qBittorrent with latest v1/2 libtorrent
+            # <version>-v2 - specific qBittorrent with latest v2 libtorrent
             type=raw,value=${{ steps.ver.outputs.tag }}-${{ matrix.LIBTORRENT_TAG }},enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'release' }}
             # <version>-debug - specific debug qBittorrent with latest v2 libtorrent
             type=raw,value=${{ steps.ver.outputs.tag }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' && matrix.LIBTORRENT_TAG == 'v2' }}
-            # <version>-v1/2-debug - specific debug qBittorrent with latest v1/2 libtorrent
+            # <version>-v2-debug - specific debug qBittorrent with latest v2 libtorrent
             type=raw,value=${{ steps.ver.outputs.tag }}-${{ matrix.LIBTORRENT_TAG }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
       - name: Build image

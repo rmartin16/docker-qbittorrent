@@ -43,8 +43,6 @@ jobs:
             LIBTORRENT_TAG: v2_1
           - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}
             LIBTORRENT_TAG: v2
-          - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: v1
 
     steps:
       - name: Checkout repository
