@@ -11,6 +11,12 @@ on:
     - cron: "36 4 */2 * *"
   workflow_dispatch:
   workflow_call:
+    inputs:
+      sample:
+        description: "Build a representative sample (release builds only) instead of every version"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
 
@@ -25,7 +31,8 @@ jobs:
     secrets: inherit
     uses: ./.github/workflows/build-images.yml
     with:
-      qbittorrent-versions: '["master", "v5_3_x", "v5_2_x", "v5_1_x", "v5_0_x", "v4_6_x", "v4_5_x", "v4_4_x", "v4_3_x"]'
+      qbittorrent-versions: ${{ inputs.sample && '["master"]' || '["master", "v5_3_x", "v5_2_x", "v5_1_x", "v5_0_x", "v4_6_x", "v4_5_x", "v4_4_x", "v4_3_x"]' }}
+      build-types: ${{ inputs.sample && '["release"]' || '["release", "debug"]' }}
       version-style: branch
       libtorrent-v2-version: ${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}
       libtorrent-v2_1-version: ${{ needs.libtorrent-versions.outputs.libtorrent-v2_1-version }}
