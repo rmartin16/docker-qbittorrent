@@ -3,12 +3,12 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
 
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     ignore:
       # The legacy images build ancient libtorrent (1.1.x/1.2.x) that only
       # compiles against the Boost/GCC in Ubuntu 24.04 LTS; newer Ubuntu
@@ -22,7 +22,7 @@ updates:
   - package-ecosystem: "pre-commit"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     groups:
       pre-commit:
         patterns:
@@ -32,4 +32,4 @@ updates:
   - package-ecosystem: "uv"
     directory: "/.github/verify"
     schedule:
-      interval: "daily"
+      interval: "weekly"
