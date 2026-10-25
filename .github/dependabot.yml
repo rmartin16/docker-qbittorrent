@@ -23,6 +23,10 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      pre-commit:
+        patterns:
+          - "*"
 
   # locked dependencies for the "Verify image" CI step
   - package-ecosystem: "uv"
