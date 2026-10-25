@@ -1,0 +1,15 @@
+# Locked dependencies for the "Verify image" CI step; kept current by Dependabot.
+[project]
+name = "verify-image"
+version = "0"
+requires-python = ">=3.10"
+dependencies = [
+    "qbittorrent-api==2026.10.1",
+]
+
+[dependency-groups]
+# not installed; only pins the uv version that setup-uv reads from uv.lock
+uv = ["uv==0.13.5"]
+
+[tool.uv]
+package = false
