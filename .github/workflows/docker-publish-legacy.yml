@@ -9,6 +9,12 @@ name: Publish Legacy Images
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      sample:
+        description: "Build a representative sample (release builds only) instead of every version"
+        required: false
+        default: false
+        type: boolean
 
 
 env:
@@ -32,35 +38,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        QBITTORRENT_VERSION: [ "4.1.0","4.1.1","4.1.2","4.1.3","4.1.4","4.1.5","4.1.6","4.1.7","4.1.8","4.1.9","4.1.9.1","4.2.0","4.2.1","4.2.2","4.2.3","4.2.4","4.2.5" ]
-        QBITTORRENT_BUILD_TYPE: [ "release", "debug" ]
-        include:
-          - LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: "v1"
-          - LIBTORRENT_VERSION: "1_1_14"
-            LIBTORRENT_TAG: "1_1_14"
-          - QBITTORRENT_VERSION: "4.2.0"
-            LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: "v1"
-          - QBITTORRENT_VERSION: "4.2.1"
-            LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: "v1"
-          - QBITTORRENT_VERSION: "4.2.2"
-            LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: "v1"
-          - QBITTORRENT_VERSION: "4.2.3"
-            LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: "v1"
-          - QBITTORRENT_VERSION: "4.2.4"
-            LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: "v1"
-          - QBITTORRENT_VERSION: "4.2.5"
-            LIBTORRENT_VERSION: ${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}
-            LIBTORRENT_TAG: "v1"
+        # sample: the oldest and newest qBittorrent on each libtorrent line
+        QBITTORRENT_VERSION: ${{ fromJson(inputs.sample && '["4.1.0", "4.1.9.1", "4.2.0", "4.2.5"]' || '["4.1.0","4.1.1","4.1.2","4.1.3","4.1.4","4.1.5","4.1.6","4.1.7","4.1.8","4.1.9","4.1.9.1","4.2.0","4.2.1","4.2.2","4.2.3","4.2.4","4.2.5"]') }}
+        QBITTORRENT_BUILD_TYPE: ${{ fromJson(inputs.sample && '["release"]' || '["release", "debug"]') }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve libtorrent version
+        id: lt
+        run: |
+          # qBittorrent 4.1.x builds against libtorrent 1.1.14; 4.2.x uses the latest 1.2
+          case "${{ matrix.QBITTORRENT_VERSION }}" in
+            4.1.*) LT_VERSION="1_1_14"; LT_TAG="1_1_14" ;;
+            *) LT_VERSION="${{ needs.libtorrent-versions.outputs.libtorrent-v1-version }}"; LT_TAG="v1" ;;
+          esac
+          echo "Using libtorrent ${LT_VERSION} (cache scope ${LT_TAG}-legacy)"
+          echo "version=${LT_VERSION}" >> ${GITHUB_OUTPUT}
+          echo "tag=${LT_TAG}" >> ${GITHUB_OUTPUT}
 
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -82,7 +78,7 @@ jobs:
           labels: |
             maintainer=${{ github.repository_owner }}
             org.opencontainers.image.title=qbittorrent-nox
-            org.opencontainers.image.description=Headless qBittorrent v${{ matrix.QBITTORRENT_VERSION }} using libtorrent ${{ matrix.LIBTORRENT_VERSION }}
+            org.opencontainers.image.description=Headless qBittorrent v${{ matrix.QBITTORRENT_VERSION }} using libtorrent ${{ steps.lt.outputs.version }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
           tags: |
             # v4.2.5 - specific qBittorrent with latest v1 libtorrent
@@ -101,11 +97,11 @@ jobs:
           target: release
           context: .
           load: true
-          cache-from: type=gha,scope=${{ matrix.LIBTORRENT_TAG }}-legacy
+          cache-from: type=gha,scope=${{ steps.lt.outputs.tag }}-legacy
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
+            LIBTORRENT_VERSION=${{ steps.lt.outputs.version }}
             QBT_VERSION=${{ matrix.QBITTORRENT_VERSION }}
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
 
@@ -137,10 +133,10 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
-          cache-from: type=gha,scope=${{ matrix.LIBTORRENT_TAG }}-legacy
+          cache-from: type=gha,scope=${{ steps.lt.outputs.tag }}-legacy
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
+            LIBTORRENT_VERSION=${{ steps.lt.outputs.version }}
             QBT_VERSION=${{ matrix.QBITTORRENT_VERSION }}
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}

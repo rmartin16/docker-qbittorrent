@@ -9,6 +9,12 @@ name: Publish Release Images
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      sample:
+        description: "Build a representative sample (release builds only) instead of every version"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
 
@@ -47,6 +53,19 @@ jobs:
           echo "Latest: ${LATEST_VER}"
           echo "qbittorrent-latest-version=${LATEST_VER}" >> ${GITHUB_OUTPUT}
 
+          if [ "${{ inputs.sample }}" = "true" ]; then
+            # one release per code path: oldest (Qt5), first Qt6, last on
+            # libtorrent 2.0, first on libtorrent 2.1, and the latest
+            ALL_VERS=$( \
+              printf '%s\n' ${FINAL_VERSION_VERS} | head -n1; \
+              printf '%s\n' ${FINAL_VERSION_VERS} | grep '^4\.4\.' | head -n1; \
+              printf '%s\n' ${FINAL_VERSION_VERS} | grep -E '^4\.|^5\.[0-2]\.' | tail -n1; \
+              printf '%s\n' ${FINAL_VERSION_VERS} | grep '^5\.3\.' | head -n1; \
+              echo "${LATEST_VER}" \
+            )
+            ALL_VERS=$(printf '%s\n' ${ALL_VERS} | sort -uV)
+          fi
+
           VERS_MATRIX_LIST=$(echo ${ALL_VERS} | sed -z 's/ /","/g;s/,$/\n/')
           VERS_MATRIX_LIST="[\"${VERS_MATRIX_LIST}\"]"
           echo ${VERS_MATRIX_LIST}
@@ -62,6 +81,7 @@ jobs:
     with:
       qbittorrent-versions: ${{ needs.qbittorrent-versions.outputs.qbittorrent-versions }}
       qbittorrent-latest-version: ${{ needs.qbittorrent-versions.outputs.qbittorrent-latest-version }}
+      build-types: ${{ inputs.sample && '["release"]' || '["release", "debug"]' }}
       version-style: release
       libtorrent-v2-version: ${{ needs.libtorrent-versions.outputs.libtorrent-v2-version }}
       libtorrent-v2_1-version: ${{ needs.libtorrent-versions.outputs.libtorrent-v2_1-version }}

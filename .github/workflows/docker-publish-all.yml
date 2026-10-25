@@ -16,8 +16,9 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # never cancel an in-progress publish on main; only superseded PR runs
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   REGISTRY: ghcr.io
@@ -25,12 +26,64 @@ env:
 
 jobs:
 
+  # Decide which image families need building. Scheduled and manual runs build
+  # everything; pushes and PRs only build families whose inputs changed. PRs
+  # never publish, so they build a representative sample instead of everything.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    timeout-minutes: 5
+    outputs:
+      modern: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || steps.filter.outputs.modern == 'true' || (github.event_name == 'pull_request' && steps.filter.outputs.verify == 'true') }}
+      legacy: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || steps.filter.outputs.legacy == 'true' || (github.event_name == 'pull_request' && steps.filter.outputs.verify == 'true') }}
+      sample: ${{ github.event_name == 'pull_request' }}
+
+    steps:
+      - name: Checkout repository
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Detect changed image inputs
+        id: filter
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            modern:
+              - "All.Dockerfile"
+              - "qBittorrent.Dockerfile"
+              - "scripts/install_libtorrent.sh"
+              - "scripts/install_qbittorrent.sh"
+              - "patches/**"
+              - "assets/**"
+              - ".github/workflows/docker-publish-all.yml"
+              - ".github/workflows/docker-publish-dev.yml"
+              - ".github/workflows/docker-publish-release.yml"
+              - ".github/workflows/build-images.yml"
+              - ".github/workflows/libtorrent-latest-versions.yml"
+            legacy:
+              - "All.Legacy.Dockerfile"
+              - "qBittorrent.Legacy.Dockerfile"
+              - "scripts/*_legacy*"
+              - "patches/**"
+              - "assets/**"
+              - ".github/workflows/docker-publish-all.yml"
+              - ".github/workflows/docker-publish-legacy.yml"
+              - ".github/workflows/libtorrent-latest-versions.yml"
+            # only affects the verify step, so it's tested on PRs but doesn't
+            # warrant republishing every image
+            verify:
+              - ".github/verify/**"
+
   libtorrent-versions:
     uses: ./.github/workflows/libtorrent-latest-versions.yml
 
   build-base:
     runs-on: ubuntu-latest
-    needs: libtorrent-versions
+    needs: [ changes, libtorrent-versions ]
+    if: needs.changes.outputs.modern == 'true'
     permissions:
       contents: read
       packages: write
@@ -89,7 +142,8 @@ jobs:
 
   build-legacy-base:
     runs-on: ubuntu-latest
-    needs: libtorrent-versions
+    needs: [ changes, libtorrent-versions ]
+    if: needs.changes.outputs.legacy == 'true'
     permissions:
       contents: read
       packages: write
@@ -145,13 +199,19 @@ jobs:
           build-args: LIBTORRENT_VERSION=${{ matrix.LIBTORRENT_VERSION }}
 
   build-qbittorrent-dev:
-    needs: build-base
+    needs: [ changes, build-base ]
     uses: ./.github/workflows/docker-publish-dev.yml
+    with:
+      sample: ${{ needs.changes.outputs.sample == 'true' }}
 
   build-qbittorrent-release:
-    needs: build-base
+    needs: [ changes, build-base ]
     uses: ./.github/workflows/docker-publish-release.yml
+    with:
+      sample: ${{ needs.changes.outputs.sample == 'true' }}
 
   build-qbittorrent-legacy:
-    needs: build-legacy-base
+    needs: [ changes, build-legacy-base ]
     uses: ./.github/workflows/docker-publish-legacy.yml
+    with:
+      sample: ${{ needs.changes.outputs.sample == 'true' }}
