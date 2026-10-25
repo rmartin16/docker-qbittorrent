@@ -8,8 +8,13 @@ QBT_BUILD_TYPE="${3}"
 
 cd "${BASE_PATH}"
 
-QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/release-${QBT_VERSION}.tar.gz"
-curl -sNLk "${QBT_URL}" | tar -zxf - -C "${BASE_PATH}"
+QBT_TARBALL="release-${QBT_VERSION}.tar.gz"
+QBT_URL="https://github.com/qbittorrent/qBittorrent/archive/refs/tags/${QBT_TARBALL}"
+curl -sSfL -o "${QBT_TARBALL}" "${QBT_URL}"
+# verify the source against the recorded checksum before building it
+grep "  ${QBT_TARBALL}\$" "${BASE_PATH}/scripts/qbittorrent_legacy.sha256" | sha256sum -c -
+tar -zxf "${QBT_TARBALL}" -C "${BASE_PATH}"
+rm "${QBT_TARBALL}"
 mv "qBittorrent-release-${QBT_VERSION}" "qBittorrent"
 
 cd "${BASE_PATH}/qBittorrent"

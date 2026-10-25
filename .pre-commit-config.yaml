@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: check-yaml
       - id: check-case-conflict
@@ -8,11 +8,11 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.10.0
+    rev: 2491238703a5d3415bb2b7ff11388bf775372f29  # frozen: v0.10.0
     hooks:
       - id: shellcheck
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.7
+    rev: 03d0035246f3e81f36aed592ffb4bebf33a03106  # frozen: v1.7.7
     hooks:
       - id: actionlint

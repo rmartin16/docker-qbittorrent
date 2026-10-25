@@ -18,3 +18,14 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "daily"
+
+  # locked dependencies for the "Verify image" CI step
+  - package-ecosystem: "uv"
+    directory: "/.github/verify"
+    schedule:
+      interval: "daily"

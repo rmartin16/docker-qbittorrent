@@ -34,6 +34,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  UV_LOCKED: 1
   REGISTRY_USER: rmartin16
   IMAGE_NAME: qbittorrent-nox
 
@@ -53,7 +54,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Determine Qt Version
         id: qt
@@ -90,11 +91,11 @@ jobs:
           echo "scope=${SCOPE}" >> ${GITHUB_OUTPUT}
 
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -102,7 +103,7 @@ jobs:
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/${{ env.IMAGE_NAME }}
           flavor: latest=false
@@ -130,7 +131,7 @@ jobs:
             type=raw,value=${{ steps.ver.outputs.tag }}-${{ matrix.LIBTORRENT_TAG }}-debug,enable=${{ matrix.QBITTORRENT_BUILD_TYPE == 'debug' }}
 
       - name: Build image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           file: All.Dockerfile
           target: release
@@ -146,21 +147,22 @@ jobs:
             QBT_BUILD_TYPE=${{ matrix.QBITTORRENT_BUILD_TYPE }}
             QT_VERSION=${{ steps.qt.outputs.version }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: '3.x'
+          version-file: .github/verify/uv.lock
 
       - name: Verify image
         run: |
           DOCKER_TAG=${{ steps.ver.outputs.tag }}-${{ matrix.LIBTORRENT_TAG }}
           if [ "${{ matrix.QBITTORRENT_BUILD_TYPE }}" = "debug" ]; then DOCKER_TAG="${DOCKER_TAG}-debug"; fi
           docker run -d --name qbt -p8080:8080 ${REGISTRY}/${REGISTRY_USER}/${IMAGE_NAME}:${DOCKER_TAG}
-          python -m pip install git+https://github.com/rmartin16/qbittorrent-api
+          # wait for the WebUI to accept connections before querying it
+          timeout 60 sh -c 'until curl -s -o /dev/null http://localhost:8080; do sleep 1; done'
           docker logs qbt
-          python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.build_info.libtorrent=="${{ steps.lt.outputs.version }}.0"'
+          uv run --project .github/verify python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); print(f"{client.app.version=}"); print(f"{client.app.build_info=}"); assert client.app.build_info.libtorrent=="${{ steps.lt.outputs.version }}.0"'
           if [ "${{ inputs.version-style }}" = "release" ]; then
-            python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); assert client.app.version.lower()=="v${{ matrix.QBITTORRENT_VERSION }}"'
+            uv run --project .github/verify python -c 'from qbittorrentapi import Client; client=Client("localhost",8080,"admin","adminadmin"); assert client.app.version.lower()=="v${{ matrix.QBITTORRENT_VERSION }}"'
           fi
           docker exec qbt /bin/sh -c "tail -n+1 /build_commit.*"
 
@@ -168,7 +170,7 @@ jobs:
       # SBOM attestations are attached -- these can't ride on `docker push`
       - name: Publish image to ghcr.io
         if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           file: All.Dockerfile
           target: release
